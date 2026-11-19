@@ -351,6 +351,7 @@
     <nav class="main-nav" aria-label="Main">
       <a href="/" data-nav="home" class="active">Home</a>
       <a href="/tapes" data-nav="tapes">Tapes</a>
+      <a href="/singles" data-nav="singles">Singles</a>
       <a href="/featured" data-nav="featured">Featured</a>
       <a href="/rankings" data-nav="rankings">Rankings</a>
       <a href="/advertise" data-nav="advertise">Advertise</a>
@@ -415,6 +416,15 @@
     <div id="newDropsWrap"><div class="empty"><h3>No drops yet</h3><p>New tapes land here the moment they go live.</p></div></div>
     <p style="margin-top:16px"><a class="btn btn-dark" href="/tapes" data-nav="tapes">Browse All Tapes →</a></p>
   </section>
+  <!-- SINGLES — one-song releases: small preview on home, full list on its own page -->
+  <section aria-labelledby="singles-h" style="padding-top:6px">
+    <div class="sec-head">
+      <h2 id="singles-h">Sing<span class="accent">les</span></h2>
+      <p>One song, not a full tape — newest singles first. Stream free, download free.</p>
+    </div>
+    <div id="singlesPreviewWrap"><div class="empty"><h3>No singles yet</h3><p>Drop one song and it&#39;ll land here.</p></div></div>
+    <p style="margin-top:16px"><a class="btn btn-dark" href="/singles" data-nav="singles">Browse All Singles →</a></p>
+  </section>
   <section aria-labelledby="explore-h">
       <div class="sec-head">
         <h2 id="explore-h">Explore <span class="accent">Get Raw</span></h2>
@@ -422,6 +432,7 @@
       </div>
       <div class="home-grid">
         <a class="home-tile" href="/tapes" data-nav="tapes"><strong>Latest <span>Tapes</span></strong><p>Fresh uploads from every artist. Stream free, download free.</p><span class="go">Go to Tapes →</span></a>
+        <a class="home-tile" href="/singles" data-nav="singles"><strong>Sing<span>les</span></strong><p>One song, not a full tape. The newest singles, free to stream and download.</p><span class="go">Go to Singles →</span></a>
         <a class="home-tile" href="/featured" data-nav="featured"><strong>Featured <span>Tapes</span></strong><p>The tapes at the front of the store — paid placements and top movers.</p><span class="go">Go to Featured →</span></a>
         <a class="home-tile" href="/rankings" data-nav="rankings"><strong>Rank<span>ings</span></strong><p>Global, Local, Most Plays, Most Downloads and by-genre charts.</p><span class="go">Go to Rankings →</span></a>
         <a class="home-tile" href="/upload" data-nav="upload"><strong>Upload a <span>Tape</span></strong><p>Upload free — it saves as a private draft in your My Tapes until you publish it or schedule a premiere.</p><span class="go">Go to Upload →</span></a>
@@ -482,6 +493,29 @@
       <div class="empty">
         <h3>No tapes in the feed yet</h3>
         <p>New tapes will show up here the moment they go live — newest at the top. This page is just the feed: every new drop lands here to stream and download free.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: SINGLES ============ -->
+  <section id="singles" class="page" data-page="singles" aria-labelledby="singles-page-h">
+    <div class="sec-head">
+      <h2 id="singles-page-h">Sing<span class="accent">les</span></h2>
+      <p>One song, not a full tape — newest first. Stream free, download free.</p>
+      <span class="spacer"></span>
+      <span id="singlesCount" style="font-weight:700"></span>
+    </div>
+    <p style="margin:0 0 14px;display:flex;align-items:center;gap:8px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;font-size:14px;color:var(--muted)"><span aria-hidden="true" style="width:9px;height:9px;border-radius:50%;background:var(--orange);display:inline-block;flex:0 0 auto"></span> One-song releases · Newest first</p>
+    <div class="toolbar">
+      <input type="search" id="singlesSearchBox" placeholder="Search singles, artists, DJs…" aria-label="Search singles" />
+      <select id="singlesGenreFilter" aria-label="Filter by genre">
+        <option value="">All genres</option>
+      </select>
+    </div>
+    <div id="singlesGridWrap">
+      <div class="empty">
+        <h3>No singles yet</h3>
+        <p>One-song releases will show up here the moment they go live — newest at the top.</p>
       </div>
     </div>
   </section>
@@ -566,7 +600,7 @@
   <section id="upload" class="page" data-page="upload" aria-labelledby="upload-h">
     <div class="sec-head">
       <h2 id="upload-h">Upload a <span class="accent">Tape</span></h2>
-      <p>Free forever. Uploading creates your artist profile under your @handle — come back and add more tapes to the same profile anytime. Every upload saves as a <strong>private draft</strong> in your My Tapes (in your profile) — it does not go to the feed until you publish it or schedule a premiere from there.</p>
+      <p>Free forever. Uploading creates your artist profile under your @handle — come back and add more tapes to the same profile anytime. Every upload saves as a <strong>private draft</strong> in your My Tapes (in your profile) — it does not go to the feed until you publish it or schedule a premiere from there. One song instead of a full tape? Just upload that one track — it shows up in Singles.</p>
     </div>
     <form class="form-card" id="uploadForm" novalidate>
       <div class="form-grid">
@@ -759,6 +793,7 @@
     <nav aria-label="Footer">
       <a href="/" data-nav="home">Home — Artist of the Week</a>
       <a href="/tapes" data-nav="tapes">Latest Tapes</a>
+      <a href="/singles" data-nav="singles">Singles</a>
       <a href="/featured" data-nav="featured">Featured Tapes</a>
       <a href="/rankings" data-nav="rankings">Rankings</a>
       <a href="/upload" data-nav="upload">Upload a Tape</a>
@@ -1055,6 +1090,7 @@
   function fmt(n){ return n>=1000 ? (n/1000).toFixed(1).replace(/\.0$/,"")+"k" : String(n); }
   function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove("on");},3200); }
   function isLive(tape){ return !tape.draft && (!tape.releaseAt || tape.releaseAt <= Date.now()); }
+  function isSingle(tape){ return isLive(tape) && (tape.tracks||[]).length===1; }
   function isScheduled(tape){ return !tape.draft && !!tape.releaseAt && tape.releaseAt > Date.now(); }
   function normCashtag(c){ c = String(c||"").trim().replace(/\s+/g,""); if(!c) return ""; if(c.charAt(0)!=="$") c="$"+c; return c.length>1 ? c : ""; }
   function cashUrl(c){ var t = normCashtag(c); return t ? "https://cash.app/"+t : ""; }
@@ -1072,10 +1108,10 @@
   }
 
   /* ---------- Separate-page router — clean paths, no hash (unchanged) ---------- */
-  var PAGES = ["home","tapes","featured","rankings","upload","sign-in","advertise","artist","feature"];
-  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","featured":"/featured","rankings":"/rankings","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist","feature":"/feature"};
-  var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/featured":"featured","/rankings":"rankings","/upload":"upload","/sign-in":"sign-in","/profile":"sign-in","/advertise":"advertise"};
-  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist"};
+  var PAGES = ["home","tapes","singles","featured","rankings","upload","sign-in","advertise","artist","feature"];
+  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","singles":"/singles","featured":"/featured","rankings":"/rankings","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist","feature":"/feature"};
+  var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/singles":"singles","/featured":"featured","/rankings":"rankings","/upload":"upload","/sign-in":"sign-in","/profile":"sign-in","/advertise":"advertise"};
+  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","singles":"Get Raw Mixtapes — Singles","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist"};
   var currentPage = "home";
   var currentArtistHandle = "";
   var currentFeatureHandle = "";
@@ -1195,7 +1231,7 @@
       '<span class="tape-meta"><h3>'+esc(tape.title)+'</h3>'+
       '<span class="artist artist-link" data-artist="'+esc(tape.handle||"")+'" role="link" tabindex="0" title="View '+esc(tape.artist)+' profile">'+esc(tape.artist)+'</span>'+
       '<span class="sub">'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'')+'</span>'+
-      '<span class="tape-stats"><span>▶ '+fmt(tape.plays)+' plays</span><span>⬇ '+fmt(tape.downloads)+' downloads</span><span>'+tape.tracks.length+' tracks</span></span></span>';
+      '<span class="tape-stats"><span>▶ '+fmt(tape.plays)+' plays</span><span>⬇ '+fmt(tape.downloads)+' downloads</span><span>'+tape.tracks.length+' track'+(tape.tracks.length===1?'':'s')+'</span></span></span>';
     btn.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; openTape(tape.id); });
     return btn;
   }
@@ -1479,7 +1515,46 @@
     list.forEach(function(t){ grid.appendChild(tapeCard(t)); });
     wrap.innerHTML=""; wrap.appendChild(grid);
   }
-  function renderAll(){ renderTapes(); renderFeatured(); renderFeaturedArtists(); renderSoon(); renderRankings(); renderYearStats(); renderProfile(); renderNewDrops(); }
+  function visibleSingles(){
+    var q = $("singlesSearchBox").value.trim().toLowerCase();
+    var g = $("singlesGenreFilter").value;
+    return tapes.filter(function(t){
+      if(!isSingle(t)) return false;
+      if(g && t.genre!==g) return false;
+      if(!q) return true;
+      return (t.title+" "+t.artist+" "+(t.dj||"")+" "+t.genre).toLowerCase().indexOf(q)>=0;
+    }).slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+  }
+  function renderSingles(){
+    var wrap = $("singlesGridWrap");
+    var list = visibleSingles();
+    var count = tapes.filter(isSingle).length;
+    $("singlesCount").textContent = count ? count+(count===1?" single":" singles")+" here" : "";
+    if(!count){
+      wrap.innerHTML = '<div class="empty"><h3>No singles yet</h3><p>One-song releases will show up here the moment they go live — newest at the top.</p></div>';
+      return;
+    }
+    if(!list.length){
+      wrap.innerHTML = '<div class="empty"><h3>Nothing matches that search</h3><p>Try a different artist, title, or genre.</p></div>';
+      return;
+    }
+    var grid = document.createElement("div"); grid.className="tape-grid";
+    list.forEach(function(t){ grid.appendChild(tapeCard(t)); });
+    wrap.innerHTML=""; wrap.appendChild(grid);
+  }
+  function renderSinglesPreview(){
+    var wrap = $("singlesPreviewWrap");
+    if(!wrap) return;
+    var list = tapes.filter(isSingle).slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); }).slice(0,3);
+    if(!list.length){
+      wrap.innerHTML = '<div class="empty"><h3>No singles yet</h3><p>Drop one song and it\'ll land here.</p><a class="btn btn-orange" href="/upload" data-nav="upload">Upload a Single — Free</a></div>';
+      return;
+    }
+    var grid = document.createElement("div"); grid.className="tape-grid";
+    list.forEach(function(t){ grid.appendChild(tapeCard(t)); });
+    wrap.innerHTML=""; wrap.appendChild(grid);
+  }
+  function renderAll(){ renderTapes(); renderFeatured(); renderFeaturedArtists(); renderSoon(); renderRankings(); renderYearStats(); renderProfile(); renderNewDrops(); renderSingles(); renderSinglesPreview(); }
 
   /* ---------- Tape dialog + player (audio now streams from the backend) ---------- */
   var audio = $("audioEl");
@@ -1528,7 +1603,7 @@
     $("dlgTitle").textContent = tape.title;
     $("dlgCover").innerHTML = tape.cover ? '<img src="'+tape.cover+'" alt="Cover art for '+esc(tape.title)+'" style="width:110px;height:110px;border-radius:8px;object-fit:cover" />' : '<div style="width:110px;height:110px;border-radius:8px;background:var(--ink);position:relative;overflow:hidden">'+coverHTML(tape)+'</div>';
     $("dlgMeta").innerHTML = '<a href="/artist/'+esc((tape.handle||"").replace(/^@/,""))+'" data-artist="'+esc(tape.handle)+'" class="artist-link">'+esc(tape.artist)+'</a> ('+esc(tape.handle)+')<br>'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'');
-    $("dlgStats").textContent = fmt(tape.plays)+" plays · "+fmt(tape.downloads)+" downloads · "+tape.tracks.length+" tracks · Free download";
+    $("dlgStats").textContent = fmt(tape.plays)+" plays · "+fmt(tape.downloads)+" downloads · "+tape.tracks.length+" track"+(tape.tracks.length===1?"":"s")+" · Free download";
     $("dlgDesc").textContent = tape.desc || "";
     var lockHTML = "";
     if(!isLive(tape) && dialogPreview) lockHTML = '<p class="countdown">Private preview — only you can see this tape. It is not in the feed and fans cannot see it.</p>';
@@ -1833,7 +1908,7 @@
         actions += '<button class="btn btn-dark small" type="button" data-open="'+t.id+'">Open Tape</button>';
       }
       actions += '<button class="btn btn-danger small" type="button" data-delete-tape="'+t.id+'">Delete</button>';
-      return '<li class="mt-item"><div class="mt-top"><span><strong>'+esc(t.title)+'</strong> · '+fmt(t.plays)+' plays · '+fmt(t.downloads)+' downloads · '+t.tracks.length+' tracks</span><span class="status-pill '+pillCls+'">'+status+'</span></div><div class="mt-actions">'+actions+'</div></li>';
+      return '<li class="mt-item"><div class="mt-top"><span><strong>'+esc(t.title)+'</strong> · '+fmt(t.plays)+' plays · '+fmt(t.downloads)+' downloads · '+t.tracks.length+' track'+(t.tracks.length===1?'':'s')+'</span><span class="status-pill '+pillCls+'">'+status+'</span></div><div class="mt-actions">'+actions+'</div></li>';
     }
     wrap.hidden=false;
     var dl = (currentProfile.downloadIds || []).map(function(id){ return findTape(id); }).filter(Boolean);
@@ -1923,6 +1998,7 @@
   /* ---------- Rankings controls (unchanged) ---------- */
   var genreOpts = GENRES.map(function(g){ return '<option>'+g+'</option>'; }).join("");
   $("genreFilter").innerHTML = '<option value="">All genres</option>'+genreOpts;
+  $("singlesGenreFilter").innerHTML = '<option value="">All genres</option>'+genreOpts;
   $("rankGenre").innerHTML = genreOpts;
   document.querySelectorAll(".tab").forEach(function(tab){
     tab.addEventListener("click", function(){
@@ -1936,6 +2012,8 @@
   $("rankGenre").addEventListener("change", renderRankings);
   $("searchBox").addEventListener("input", renderTapes);
   $("genreFilter").addEventListener("change", renderTapes);
+  $("singlesSearchBox").addEventListener("input", renderSingles);
+  $("singlesGenreFilter").addEventListener("change", renderSingles);
 
   /* ---------- Advertise (unchanged — copies a booking request) ---------- */
   $("bookSlotBtn").addEventListener("click", function(){
