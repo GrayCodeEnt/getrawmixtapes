@@ -406,8 +406,16 @@
         </div>
       </div>
     </section>
-
-    <section aria-labelledby="explore-h">
+  <!-- NEW DROPS — latest published tapes, right on the home page -->
+  <section aria-labelledby="newdrops-h" style="padding-top:6px">
+    <div class="sec-head">
+      <h2 id="newdrops-h">New <span class="accent">Drops</span></h2>
+      <p>Fresh uploads — newest first. Stream free, download free.</p>
+    </div>
+    <div id="newDropsWrap"><div class="empty"><h3>No drops yet</h3><p>New tapes land here the moment they go live.</p></div></div>
+    <p style="margin-top:16px"><a class="btn btn-dark" href="/tapes" data-nav="tapes">Browse All Tapes →</a></p>
+  </section>
+  <section aria-labelledby="explore-h">
       <div class="sec-head">
         <h2 id="explore-h">Explore <span class="accent">Get Raw</span></h2>
         <p>Every part of the site is its own page — pick where you're headed.</p>
@@ -1386,7 +1394,19 @@
       }
     });
   }
-  function renderAll(){ renderTapes(); renderFeatured(); renderSoon(); renderRankings(); renderYearStats(); renderProfile(); }
+  function renderNewDrops(){
+    var wrap = $("newDropsWrap");
+    if(!wrap) return;
+    var list = tapes.filter(isLive).slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); }).slice(0,6);
+    if(!list.length){
+      wrap.innerHTML = '<div class="empty"><h3>No drops yet</h3><p>New tapes land here the moment they go live.</p><a class="btn btn-orange" href="/upload" data-nav="upload">Be the First — Upload Free</a></div>';
+      return;
+    }
+    var grid = document.createElement("div"); grid.className="tape-grid";
+    list.forEach(function(t){ grid.appendChild(tapeCard(t)); });
+    wrap.innerHTML=""; wrap.appendChild(grid);
+  }
+  function renderAll(){ renderTapes(); renderFeatured(); renderSoon(); renderRankings(); renderYearStats(); renderProfile(); renderNewDrops(); }
 
   /* ---------- Tape dialog + player (audio now streams from the backend) ---------- */
   var audio = $("audioEl");
