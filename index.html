@@ -531,6 +531,7 @@
       <button class="tab" role="tab" aria-selected="false" data-rank="local">Local</button>
       <button class="tab" role="tab" aria-selected="false" data-rank="plays">Most Plays</button>
       <button class="tab" role="tab" aria-selected="false" data-rank="downloads">Most Downloads</button>
+      <button class="tab" role="tab" aria-selected="false" data-rank="singles">Singles</button>
       <button class="tab" role="tab" aria-selected="false" data-rank="genre">By Genre</button>
     </div>
     <div class="rank-controls" id="rankControls" hidden>
@@ -546,7 +547,7 @@
     <div id="rankWrap">
       <div class="empty">
         <h3>Charts open with the first tape</h3>
-        <p>Rankings fill in the moment tapes go live — Global, Local, Most Plays, Most Downloads, and every genre gets its own chart.</p>
+        <p>Rankings fill in the moment tapes go live — Global, Local, Most Plays, Most Downloads, Singles, and every genre gets its own chart.</p>
       </div>
     </div>
 
@@ -1355,6 +1356,10 @@
       live = live.filter(function(t){ return (t.city||"").toLowerCase()===city; });
       metric=function(t){return t.plays+t.downloads;}; label="plays + downloads";
     }
+    else if(rankMode==="singles"){
+      live = live.filter(isSingle);
+      metric=function(t){return t.plays+t.downloads;}; label="plays + downloads";
+    }
     else if(rankMode==="genre"){
       var g = $("rankGenre").value;
       live = live.filter(function(t){ return t.genre===g; });
@@ -1370,7 +1375,7 @@
     $("localCtl").hidden = rankMode!=="local";
     $("genreCtl").hidden = rankMode!=="genre";
     if(!tapes.filter(isLive).length){
-      wrap.innerHTML = '<div class="empty"><h3>Charts open with the first tape</h3><p>Rankings fill in the moment tapes go live — Global, Local, Most Plays, Most Downloads, and every genre gets its own chart.</p></div>';
+      wrap.innerHTML = '<div class="empty"><h3>Charts open with the first tape</h3><p>Rankings fill in the moment tapes go live — Global, Local, Most Plays, Most Downloads, Singles, and every genre gets its own chart.</p></div>';
       return;
     }
     var r = rankedList();
