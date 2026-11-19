@@ -217,6 +217,7 @@
   .track-row .n{font-family:"Anton",sans-serif;color:var(--muted);width:26px;text-align:right;flex:0 0 auto}
   .track-row input{flex:1;min-width:0}
   .track-row .fname{font-size:12.5px;color:var(--muted);flex:0 0 auto;max-width:38%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .track-row .trk-rm{flex:0 0 auto;padding:2px 10px;line-height:1.4}
   .cover-preview{display:none;gap:14px;align-items:center;margin-top:4px}
   .cover-preview img{width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
   .form-msg{border-radius:8px;padding:12px 16px;font-weight:600;display:none;margin-top:16px}
@@ -605,8 +606,16 @@
     </div>
     <form class="form-card" id="uploadForm" novalidate>
       <div class="form-grid">
+        <div class="field full">
+          <label>What are you uploading? *</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap" role="group" aria-label="Upload type">
+            <button type="button" class="btn" id="kindSingleBtn">Single — one song</button>
+            <button type="button" class="btn btn-dark" id="kindMixtapeBtn">Mixtape — 2 to 20 songs</button>
+          </div>
+          <span class="hint" id="uploadKindHint">A mixtape has 2 or more songs. It shows up in Tapes, New Drops, and Rankings.</span>
+        </div>
         <div class="field">
-          <label for="fTitle">Tape title *</label>
+          <label for="fTitle" id="fTitleLabel">Tape title *</label>
           <input type="text" id="fTitle" required placeholder="e.g. The Last 7" />
         </div>
         <div class="field">
@@ -666,7 +675,8 @@
         <div class="field">
           <label for="fTracks">Audio tracks *</label>
           <input type="file" id="fTracks" accept="audio/*" multiple required />
-          <span class="hint">Pick every track at once. Name them below — fans stream and download each one free.</span>
+          <div style="margin-top:8px"><button type="button" class="btn btn-outline small" id="addTracksBtn">+ Add more tracks</button></div>
+          <span class="hint">Pick songs one at a time or several at once — every pick adds to the list below, nothing gets replaced. Name them, remove any you don&#39;t want.</span>
         </div>
         <div class="field full" id="trackNamesWrap" hidden>
           <label>Track titles</label>
@@ -1643,23 +1653,62 @@
 
   /* ---------- Upload (files go to the server; the upload creates the artist profile) ---------- */
   var trackFiles = [];
-  $("fCover").addEventListener("change", function(){
-    var f = this.files[0];
-    if(f){ $("coverImg").src = URL.createObjectURL(f); $("coverPreview").style.display="flex"; }
-  });
-  $("fTracks").addEventListener("change", function(){
-    trackFiles = Array.prototype.slice.call(this.files||[]);
+  var uploadKind = "mixtape"; // "single" (1 song) or "mixtape" (2-20 songs)
+  function setUploadKind(kind){
+    uploadKind = kind;
+    $("kindSingleBtn").className = "btn" + (kind==="single" ? " btn-dark" : "");
+    $("kindMixtapeBtn").className = "btn" + (kind==="mixtape" ? " btn-dark" : "");
+    $("uploadKindHint").textContent = kind==="single"
+      ? "One song. It shows up in Singles — on the homepage, the Singles tab, and the Rankings Singles chart."
+      : "A mixtape has 2 or more songs. It shows up in Tapes, New Drops, and Rankings.";
+    $("fTitleLabel").textContent = kind==="single" ? "Single title *" : "Tape title *";
+    if(kind==="single" && trackFiles.length > 1){ trackFiles = trackFiles.slice(0,1); toast("Switched to Single — kept the first song."); }
+    renderTrackRows();
+  }
+  $("kindSingleBtn").addEventListener("click", function(){ setUploadKind("single"); });
+  $("kindMixtapeBtn").addEventListener("click", function(){ setUploadKind("mixtape"); });
+  $("addTracksBtn").addEventListener("click", function(){ $("fTracks").click(); });
+  // Rebuild the title rows from trackFiles. Titles the user typed are
+  // kept on the File object (f._title) so adding or removing a track
+  // never wipes what they already named.
+  function renderTrackRows(){
     var wrap = $("trackNamesWrap"), rows = $("trackRows");
     rows.innerHTML="";
     trackFiles.forEach(function(f, i){
       var row = document.createElement("div"); row.className="track-row";
       var base = f.name.replace(/\.[^.]+$/,"").replace(/^\d+[\s._-]+/,"").replace(/[_-]+/g," ").trim() || ("Track "+(i+1));
       row.innerHTML = '<span class="n">'+(i+1)+'.</span>';
-      var inp = document.createElement("input"); inp.type="text"; inp.value=base; inp.setAttribute("aria-label","Title for track "+(i+1));
+      var inp = document.createElement("input"); inp.type="text"; inp.value = f._title || base; inp.setAttribute("aria-label","Title for track "+(i+1));
+      inp.addEventListener("input", function(){ f._title = inp.value; });
       var fn = document.createElement("span"); fn.className="fname"; fn.textContent=f.name;
-      row.appendChild(inp); row.appendChild(fn); rows.appendChild(row);
+      var rm = document.createElement("button"); rm.type="button"; rm.className="btn btn-outline small trk-rm"; rm.textContent="×"; rm.setAttribute("aria-label","Remove "+f.name);
+      rm.addEventListener("click", function(){ trackFiles.splice(i,1); renderTrackRows(); });
+      row.appendChild(inp); row.appendChild(fn); row.appendChild(rm); rows.appendChild(row);
     });
     wrap.hidden = trackFiles.length===0;
+  }
+  $("fCover").addEventListener("change", function(){
+    var f = this.files[0];
+    if(f){ $("coverImg").src = URL.createObjectURL(f); $("coverPreview").style.display="flex"; }
+  });
+  $("fTracks").addEventListener("change", function(){
+    // APPEND — the old code replaced the whole list on every pick, so
+    // on a phone (one file per pick) only the last song ever survived.
+    var picked = Array.prototype.slice.call(this.files||[]);
+    this.value = "";
+    if(uploadKind==="single"){
+      if(picked.length){
+        trackFiles = [picked[0]];
+        if(picked.length > 1) toast("A single is one song — kept the first one. Switch to Mixtape to add more.");
+      }
+    } else {
+      picked.forEach(function(f){
+        var dup = trackFiles.some(function(x){ return x.name===f.name && x.size===f.size; });
+        if(!dup) trackFiles.push(f);
+      });
+      if(trackFiles.length > 20){ trackFiles = trackFiles.slice(0,20); toast("20 tracks max per tape."); }
+    }
+    renderTrackRows();
   });
   $("uploadForm").addEventListener("submit", function(ev){
     ev.preventDefault();
@@ -1676,6 +1725,8 @@
     if(!genre){ msg.classList.add("err"); msg.textContent="Pick a genre — it puts the tape on the right chart."; return; }
     if(!trackFiles.length){ msg.classList.add("err"); msg.textContent="Add at least one audio track."; return; }
     if(trackFiles.length > 20){ msg.classList.add("err"); msg.textContent="20 tracks max per tape."; return; }
+    if(uploadKind==="single" && trackFiles.length !== 1){ msg.classList.add("err"); msg.textContent="A single is one song — add exactly one audio track."; return; }
+    if(uploadKind==="mixtape" && trackFiles.length < 2){ msg.classList.add("err"); msg.textContent="A mixtape has 2 or more songs — add another track, or switch to Single for one song."; return; }
     var titleInputs = $("trackRows").querySelectorAll("input");
     var form = new FormData();
     form.append("title", title); form.append("artist", artist); form.append("handle", handle);
@@ -1713,7 +1764,7 @@
       saveCache();
       msg.classList.add("ok");
       msg.textContent = res.data.message || "“"+title+"” is saved as a private draft in your My Tapes, "+handle+".";
-      ev.target.reset(); trackFiles=[]; $("trackNamesWrap").hidden=true; $("trackRows").innerHTML=""; $("coverPreview").style.display="none";
+      ev.target.reset(); trackFiles=[]; renderTrackRows(); $("coverPreview").style.display="none";
       refreshMe().then(function(){ renderAll(); showPage("sign-in"); });
       toast("Draft saved — find “"+title+"” in your My Tapes.");
     }).catch(function(){
@@ -1721,6 +1772,13 @@
       msg.className="form-msg err";
       msg.textContent = "Couldn't reach the Get Raw server — check your connection and try again. Your files were not uploaded.";
     });
+  });
+
+  $("uploadForm").addEventListener("reset", function(){
+    trackFiles = [];
+    renderTrackRows();
+    $("coverPreview").style.display="none";
+    setUploadKind("mixtape");
   });
 
   /* ---------- Profiles / auth (server accounts — log in anywhere) ---------- */
