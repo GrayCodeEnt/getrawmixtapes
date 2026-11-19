@@ -465,6 +465,15 @@
     <p style="margin-top:20px"><a class="btn btn-outline" href="/" data-nav="home">← Back to Home</a> <a class="btn btn-dark" href="/tapes" data-nav="tapes">Browse All Tapes</a></p>
   </section>
 
+  <!-- ============ PAGE: FEATURE — full artist write-up ============ -->
+  <section class="page" data-page="feature" id="page-feature" aria-labelledby="feature-h">
+    <div class="sec-head">
+      <h2 id="feature-h">Featured <span class="accent">Artist</span></h2>
+      <p>The full write-up — the story behind the spotlight.</p>
+    </div>
+    <div id="featureWrap"></div>
+  </section>
+
   <!-- ============ PAGE: TAPES — feed / listing only, no upload form ============ -->
   <section id="tapes" class="page" data-page="tapes" aria-labelledby="tapes-h">
     <div class="sec-head">
@@ -1074,12 +1083,13 @@
   }
 
   /* ---------- Separate-page router — clean paths, no hash (unchanged) ---------- */
-  var PAGES = ["home","tapes","featured","rankings","upload","sign-in","advertise","artist"];
-  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","featured":"/featured","rankings":"/rankings","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist"};
+  var PAGES = ["home","tapes","featured","rankings","upload","sign-in","advertise","artist","feature"];
+  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","featured":"/featured","rankings":"/rankings","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist","feature":"/feature"};
   var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/featured":"featured","/rankings":"rankings","/upload":"upload","/sign-in":"sign-in","/profile":"sign-in","/advertise":"advertise"};
-  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile"};
+  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist"};
   var currentPage = "home";
   var currentArtistHandle = "";
+  var currentFeatureHandle = "";
   function normalizePage(name){
     if(name==="profile") return "sign-in";
     return PAGES.indexOf(name)>=0 ? name : "home";
@@ -1087,6 +1097,7 @@
   function basePath(){
     var path = window.location.pathname || "/";
     if(path.indexOf("/artist/")===0) return "/";
+    if(path.indexOf("/feature/")===0) return "/";
     if(path.charAt(path.length-1)==="/") return path;
     var parts = path.split("/");
     var last = parts[parts.length-1] || "";
@@ -1099,6 +1110,7 @@
     name = normalizePage(name);
     var base = basePath();
     if(name==="artist" && currentArtistHandle) return base + "artist/" + currentArtistHandle.replace(/^@/,"");
+    if(name==="feature" && currentFeatureHandle) return base + "feature/" + currentFeatureHandle.replace(/^@/,"");
     return name==="home" ? base : base + name;
   }
   function pageFromPath(){
@@ -1107,6 +1119,7 @@
     var last = parts.length ? parts[parts.length-1] : "";
     var page = null;
     if(parts.length>=2 && parts[0]==="artist" && parts[1]){ currentArtistHandle = normHandle(parts[1]); return "artist"; }
+    if(parts.length>=2 && parts[0]==="feature" && parts[1]){ currentFeatureHandle = normHandle(parts[1]); return "feature"; }
     if(!last || last.indexOf(".")>=0) page = "home";
     else if(PAGES.indexOf(last)>=0) page = last;
     else if(last==="profile") page = "sign-in";
@@ -1133,6 +1146,7 @@
     window.scrollTo(0,0);
     document.title = PAGE_TITLES[name] || PAGE_TITLES.home;
     if(name==="artist") renderArtist();
+    if(name==="feature") renderFeature();
   }
   document.addEventListener("click", function(ev){
     var a = ev.target.closest ? ev.target.closest('a[data-nav], a[href^="/"]') : null;
@@ -1159,6 +1173,21 @@
     if(!el) return;
     ev.preventDefault();
     openArtist(el.getAttribute("data-artist"));
+  });
+  document.addEventListener("click", function(ev){
+    var el = ev.target.closest ? ev.target.closest("[data-feature]") : null;
+    if(!el) return;
+    if(ev.target.closest && ev.target.closest("[data-artist]")) return;
+    ev.preventDefault();
+    openFeature(el.getAttribute("data-feature"));
+  });
+  document.addEventListener("keydown", function(ev){
+    if(ev.key!=="Enter" && ev.key!==" ") return;
+    var el = ev.target.closest ? ev.target.closest("[data-feature]") : null;
+    if(!el) return;
+    if(ev.target.closest && ev.target.closest("[data-artist]")) return;
+    ev.preventDefault();
+    openFeature(el.getAttribute("data-feature"));
   });
 
   /* ---------- Rendering (same look, data now from the server) ---------- */
@@ -1214,7 +1243,9 @@
       name: "Mandosa",
       img: "https://api.getrawmixtapes.com/api/media/t_mwo296ia_24b8e9911c8b/cover",
       imgAlt: "Mandosa — IM ONLY HUMAN cover art",
-      bio: "Mandosa is a Boston hip-hop artist with two releases in the Gray Code catalog, \"Mr 365\" and \"No Brakes.\" 87 songs deep on ReverbNation with over 13,000 plays, and 57 tracks on SoundCloud. He's been trading music with Gray since 2018, and he performed live on Gray Code TV. On Get Raw, stream \"IM ONLY HUMAN\" and \"Don't wanna go\" — free."
+      bio: "Mandosa is a Boston hip-hop artist with two releases in the Gray Code catalog, \"Mr 365\" and \"No Brakes.\" 87 songs deep on ReverbNation with over 13,000 plays, and 57 tracks on SoundCloud. He's been trading music with Gray since 2018, and he performed live on Gray Code TV. On Get Raw, stream \"IM ONLY HUMAN\" and \"Don't wanna go\" — free.",
+      teaser: "Mandosa is a Boston hip-hop artist with two releases in the Gray Code catalog, \"Mr 365\" and \"No Brakes.\" 87 songs deep on ReverbNation with over 13,000 plays, and 57 tracks on SoundCloud.",
+      links: [{label: "SoundCloud", url: "https://soundcloud.com/mandosa-nmlb/tracks"}, {label: "ReverbNation", url: "https://legacy.reverbnation.com/mandosa"}]
     }
   ];
   function renderFeaturedArtists(){
@@ -1225,12 +1256,45 @@
       var card = document.createElement("article");
       card.className = "aotw";
       card.style.marginBottom = "28px";
+      card.style.cursor = "pointer";
+      card.setAttribute("data-feature", a.handle);
+      card.setAttribute("tabindex", "0");
+      card.setAttribute("role", "link");
       card.innerHTML = '<img src="' + a.img + '" alt="' + esc(a.imgAlt || a.name) + '">' +
         '<div class="aotw-body"><div class="k">Featured Artist</div><h3>' + esc(a.name) + '</h3>' +
-        '<p>' + esc(a.bio) + '</p>' +
-        '<p><a class="btn btn-orange" href="/artist/' + esc(a.handle) + '" data-artist="' + esc(a.handle) + '">See ' + esc(a.name) + '\'s Tapes \u2192</a></p></div>';
+        '<p>' + esc(a.teaser || a.bio) + '</p>' +
+        '<p><a class="btn btn-orange" href="/feature/' + esc(a.handle) + '" data-feature="' + esc(a.handle) + '">Read the full write-up \u2192</a> ' +
+        '<a class="btn btn-dark" href="/artist/' + esc(a.handle) + '" data-artist="' + esc(a.handle) + '">See ' + esc(a.name) + '\'s Tapes</a></p></div>';
       wrap.appendChild(card);
     });
+  }
+  function openFeature(handle){
+    handle = normHandle(handle);
+    if(!handle || handle==="@") return;
+    currentFeatureHandle = handle;
+    showPage("feature");
+  }
+  function renderFeature(){
+    var wrap = $("featureWrap");
+    if(!wrap) return;
+    var h = (currentFeatureHandle||"").replace(/^@/,"").toLowerCase();
+    var a = null;
+    FEATURED_ARTISTS.forEach(function(x){ if(x.handle.toLowerCase()===h) a = x; });
+    if(!a){
+      wrap.innerHTML = '<div class="empty"><h3>No feature for @' + esc(h) + ' yet.</h3><p>This artist has not been featured — check the Featured page for the latest spotlights.</p><a class="btn btn-dark" href="/featured" data-nav="featured">Back to Featured</a></div>';
+      return;
+    }
+    var links = "";
+    (a.links || []).forEach(function(l, idx){
+      links += (idx ? " &nbsp;·&nbsp; " : "") + '<a href="' + l.url + '" target="_blank" rel="noopener">' + esc(l.label) + '</a>';
+    });
+    wrap.innerHTML = '<article class="aotw">' +
+      '<img src="' + a.img + '" alt="' + esc(a.imgAlt || a.name) + '">' +
+      '<div class="aotw-body"><div class="k">Featured Artist</div><h3>' + esc(a.name) + '</h3>' +
+      '<p>' + esc(a.bio) + '</p>' +
+      (links ? '<p style="margin-top:14px">' + links + '</p>' : "") +
+      '<p><a class="btn btn-orange" href="/artist/' + esc(a.handle) + '" data-artist="' + esc(a.handle) + '">See ' + esc(a.name) + '\'s Tapes \u2192</a> ' +
+      '<a class="btn btn-dark" href="/featured" data-nav="featured">Back to Featured</a></p></div></article>';
   }
   function renderFeatured(){
     var feat = tapes.filter(function(t){ return t.featured && isLive(t); });
