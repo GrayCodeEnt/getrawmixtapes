@@ -451,17 +451,6 @@
       <p>Artists we're putting the spotlight on — picture, story, and their tapes.</p>
     </div>
     <div id="featuredArtistsWrap"></div>
-    <div class="sec-head">
-      <h2>Featured <span class="accent">Tapes</span></h2>
-      <p>The tapes at the front of the store right now.</p>
-    </div>
-    <div id="featuredWrap">
-      <div class="empty">
-        <h3>No featured tapes yet</h3>
-        <p>Featured placement is a paid slot — the first artist to book one owns this space. Or drop a tape free and earn it on plays.</p>
-        <a class="btn btn-orange" href="/advertise" data-nav="advertise">Book a Featured Slot — $25</a>
-      </div>
-    </div>
     <p style="margin-top:20px"><a class="btn btn-outline" href="/" data-nav="home">← Back to Home</a> <a class="btn btn-dark" href="/tapes" data-nav="tapes">Browse All Tapes</a></p>
   </section>
 
@@ -1297,15 +1286,7 @@
       '<a class="btn btn-dark" href="/featured" data-nav="featured">Back to Featured</a></p></div></article>';
   }
   function renderFeatured(){
-    var feat = tapes.filter(function(t){ return t.featured && isLive(t); });
-    var wrap = $("featuredWrap");
-    if(!feat.length){
-      wrap.innerHTML = '<div class="empty"><h3>No featured tapes yet</h3><p>Featured placement is a paid slot — the first artist to book one owns this space. Or drop a tape free and earn it on plays.</p><a class="btn btn-orange" href="/advertise" data-nav="advertise">Book a Featured Slot — $25</a></div>';
-    } else {
-      var grid=document.createElement("div"); grid.className="tape-grid";
-      feat.forEach(function(t){ grid.appendChild(tapeCard(t)); });
-      wrap.innerHTML=""; wrap.appendChild(grid);
-    }
+    // Featured Tapes grid removed Nov 19 — the Featured page is artists only now.
     var live = tapes.filter(isLive).slice().sort(function(a,b){ return (b.plays+b.downloads)-(a.plays+a.downloads); });
     var aw = $("aotwWrap");
     if(live.length && (live[0].plays+live[0].downloads)>0){
