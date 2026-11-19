@@ -445,9 +445,14 @@
 
 <main>
   <!-- ============ PAGE: FEATURED ============ -->
-  <section id="featured" class="page" data-page="featured" aria-labelledby="featured-h">
+  <section id="featured" class="page" data-page="featured" aria-labelledby="featured-artists-h">
     <div class="sec-head">
-      <h2 id="featured-h">Featured <span class="accent">Tapes</span></h2>
+      <h2 id="featured-artists-h">Featured <span class="accent">Artists</span></h2>
+      <p>Artists we're putting the spotlight on — picture, story, and their tapes.</p>
+    </div>
+    <div id="featuredArtistsWrap"></div>
+    <div class="sec-head">
+      <h2>Featured <span class="accent">Tapes</span></h2>
       <p>The tapes at the front of the store right now.</p>
     </div>
     <div id="featuredWrap">
@@ -1203,6 +1208,30 @@
     list.forEach(function(t){ grid.appendChild(tapeCard(t)); });
     wrap.innerHTML=""; wrap.appendChild(grid);
   }
+  var FEATURED_ARTISTS = [
+    {
+      handle: "mandosa",
+      name: "Mandosa",
+      img: "https://api.getrawmixtapes.com/api/media/t_mwo296ia_24b8e9911c8b/cover",
+      imgAlt: "Mandosa — IM ONLY HUMAN cover art",
+      bio: "Mandosa is a Boston hip-hop artist with two releases in the Gray Code catalog, \"Mr 365\" and \"No Brakes.\" 87 songs deep on ReverbNation with over 13,000 plays, and 57 tracks on SoundCloud. He's been trading music with Gray since 2018, and he performed live on Gray Code TV. On Get Raw, stream \"IM ONLY HUMAN\" and \"Don't wanna go\" — free."
+    }
+  ];
+  function renderFeaturedArtists(){
+    var wrap = $("featuredArtistsWrap");
+    if(!wrap) return;
+    wrap.innerHTML = "";
+    FEATURED_ARTISTS.forEach(function(a){
+      var card = document.createElement("article");
+      card.className = "aotw";
+      card.style.marginBottom = "28px";
+      card.innerHTML = '<img src="' + a.img + '" alt="' + esc(a.imgAlt || a.name) + '">' +
+        '<div class="aotw-body"><div class="k">Featured Artist</div><h3>' + esc(a.name) + '</h3>' +
+        '<p>' + esc(a.bio) + '</p>' +
+        '<p><a class="btn btn-orange" href="/artist/' + esc(a.handle) + '" data-artist="' + esc(a.handle) + '">See ' + esc(a.name) + '\'s Tapes \u2192</a></p></div>';
+      wrap.appendChild(card);
+    });
+  }
   function renderFeatured(){
     var feat = tapes.filter(function(t){ return t.featured && isLive(t); });
     var wrap = $("featuredWrap");
@@ -1406,7 +1435,7 @@
     list.forEach(function(t){ grid.appendChild(tapeCard(t)); });
     wrap.innerHTML=""; wrap.appendChild(grid);
   }
-  function renderAll(){ renderTapes(); renderFeatured(); renderSoon(); renderRankings(); renderYearStats(); renderProfile(); renderNewDrops(); }
+  function renderAll(){ renderTapes(); renderFeatured(); renderFeaturedArtists(); renderSoon(); renderRankings(); renderYearStats(); renderProfile(); renderNewDrops(); }
 
   /* ---------- Tape dialog + player (audio now streams from the backend) ---------- */
   var audio = $("audioEl");
