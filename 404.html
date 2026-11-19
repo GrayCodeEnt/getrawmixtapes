@@ -134,6 +134,11 @@
   .tape-meta h3{margin:0;font-size:19px;line-height:1.2;font-weight:700}
   .tape-meta .artist{color:var(--orange-dark);font-weight:700;font-size:15px}
   @media (prefers-color-scheme: dark){ .tape-meta .artist{color:var(--orange)} }
+  .artist-link{ color:var(--orange-dark); font-weight:700; text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+  .artist-link:hover{ color:var(--orange); }
+  @media (prefers-color-scheme: dark){ .artist-link{ color:var(--orange); } }
+  .artist-page-stats{ display:flex; gap:18px; flex-wrap:wrap; margin:12px 0 0; color:var(--muted); font-size:14.5px; }
+  .artist-page-stats b{ color:var(--text); }
   .tape-meta .sub{color:var(--muted);font-size:13.5px}
   .tape-stats{display:flex;gap:14px;margin-top:8px;font-size:13.5px;color:var(--muted);font-weight:600}
   .tape-stats span{display:inline-flex;align-items:center;gap:5px}
@@ -534,6 +539,16 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- ============ PAGE: ARTIST (public profile — every artist gets their own page) ============ -->
+  <section id="artist" class="page" data-page="artist" aria-labelledby="artist-h">
+    <div class="sec-head">
+      <h2 id="artist-h">Artist <span class="accent">Profile</span></h2>
+      <p>Every artist on Get Raw has their own page — all their tapes in one place, free to stream and download.</p>
+    </div>
+    <div id="artistWrap"><div class="empty"><h3>Loading artist…</h3><p>Pulling their tapes…</p></div></div>
+    <p style="margin-top:20px"><a class="btn btn-outline" href="/tapes" data-nav="tapes">← Back to Tapes</a> <a class="btn btn-dark" href="/rankings" data-nav="rankings">Rankings</a></p>
   </section>
 
   <!-- ============ PAGE: UPLOAD ============ -->
@@ -1046,17 +1061,19 @@
   }
 
   /* ---------- Separate-page router — clean paths, no hash (unchanged) ---------- */
-  var PAGES = ["home","tapes","featured","rankings","upload","sign-in","advertise"];
-  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","featured":"/featured","rankings":"/rankings","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise"};
+  var PAGES = ["home","tapes","featured","rankings","upload","sign-in","advertise","artist"];
+  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","featured":"/featured","rankings":"/rankings","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist"};
   var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/featured":"featured","/rankings":"rankings","/upload":"upload","/sign-in":"sign-in","/profile":"sign-in","/advertise":"advertise"};
-  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise"};
+  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile"};
   var currentPage = "home";
+  var currentArtistHandle = "";
   function normalizePage(name){
     if(name==="profile") return "sign-in";
     return PAGES.indexOf(name)>=0 ? name : "home";
   }
   function basePath(){
     var path = window.location.pathname || "/";
+    if(path.indexOf("/artist/")===0) return "/";
     if(path.charAt(path.length-1)==="/") return path;
     var parts = path.split("/");
     var last = parts[parts.length-1] || "";
@@ -1068,6 +1085,7 @@
   function cleanUrlFor(name){
     name = normalizePage(name);
     var base = basePath();
+    if(name==="artist" && currentArtistHandle) return base + "artist/" + currentArtistHandle.replace(/^@/,"");
     return name==="home" ? base : base + name;
   }
   function pageFromPath(){
@@ -1075,6 +1093,7 @@
     var parts = path.split("/").filter(function(s){ return !!s; });
     var last = parts.length ? parts[parts.length-1] : "";
     var page = null;
+    if(parts.length>=2 && parts[0]==="artist" && parts[1]){ currentArtistHandle = normHandle(parts[1]); return "artist"; }
     if(!last || last.indexOf(".")>=0) page = "home";
     else if(PAGES.indexOf(last)>=0) page = last;
     else if(last==="profile") page = "sign-in";
@@ -1100,6 +1119,7 @@
     }
     window.scrollTo(0,0);
     document.title = PAGE_TITLES[name] || PAGE_TITLES.home;
+    if(name==="artist") renderArtist();
   }
   document.addEventListener("click", function(ev){
     var a = ev.target.closest ? ev.target.closest('a[data-nav], a[href^="/"]') : null;
@@ -1111,7 +1131,22 @@
     ev.preventDefault();
     showPage(page);
   });
-  window.addEventListener("popstate", function(){ var p = pageFromPath(); if(p!==currentPage) showPage(p, false); });
+  window.addEventListener("popstate", function(){ var p = pageFromPath(); if(p!==currentPage || p==="artist") showPage(p, false); });
+  document.addEventListener("click", function(ev){
+    var el = ev.target.closest ? ev.target.closest("[data-artist]") : null;
+    if(!el) return;
+    var h = el.getAttribute("data-artist");
+    if(!h) return;
+    ev.preventDefault();
+    openArtist(h);
+  });
+  document.addEventListener("keydown", function(ev){
+    if(ev.key!=="Enter" && ev.key!==" ") return;
+    var el = ev.target.closest ? ev.target.closest("[data-artist]") : null;
+    if(!el) return;
+    ev.preventDefault();
+    openArtist(el.getAttribute("data-artist"));
+  });
 
   /* ---------- Rendering (same look, data now from the server) ---------- */
   function coverHTML(tape, cls){
@@ -1127,10 +1162,10 @@
     btn.innerHTML =
       '<span class="tape-cover">'+coverHTML(tape)+badge+'</span>'+
       '<span class="tape-meta"><h3>'+esc(tape.title)+'</h3>'+
-      '<span class="artist">'+esc(tape.artist)+'</span>'+
+      '<span class="artist artist-link" data-artist="'+esc(tape.handle||"")+'" role="link" tabindex="0" title="View '+esc(tape.artist)+' profile">'+esc(tape.artist)+'</span>'+
       '<span class="sub">'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'')+'</span>'+
       '<span class="tape-stats"><span>▶ '+fmt(tape.plays)+' plays</span><span>⬇ '+fmt(tape.downloads)+' downloads</span><span>'+tape.tracks.length+' tracks</span></span></span>';
-    btn.addEventListener("click", function(){ openTape(tape.id); });
+    btn.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; openTape(tape.id); });
     return btn;
   }
   function visibleTapes(){
@@ -1174,11 +1209,11 @@
     var aw = $("aotwWrap");
     if(live.length && (live[0].plays+live[0].downloads)>0){
       var t = live[0];
-      aw.innerHTML = '<div class="aotw"><div>'+coverHTML(t)+'</div><div class="aotw-body"><span class="k">Artist of the Week</span><h3>'+esc(t.artist)+'</h3><p>Running the site right now with <strong style="color:var(--orange)">'+esc(t.title)+'</strong> — '+fmt(t.plays)+' plays and '+fmt(t.downloads)+' downloads and counting.</p><button class="btn btn-orange" type="button" id="aotwOpen">Play the Tape</button></div></div>';
+      aw.innerHTML = '<div class="aotw"><div>'+coverHTML(t)+'</div><div class="aotw-body"><span class="k">Artist of the Week</span><h3><span class="artist-link" data-artist="'+esc(t.handle)+'">'+esc(t.artist)+'</span></h3><p>Running the site right now with <strong style="color:var(--orange)">'+esc(t.title)+'</strong> — '+fmt(t.plays)+' plays and '+fmt(t.downloads)+' downloads and counting.</p><button class="btn btn-orange" type="button" id="aotwOpen">Play the Tape</button></div></div>';
       $("aotwOpen").addEventListener("click", function(){ openTape(t.id); });
     } else if(live.length){
       var t2 = live[0];
-      aw.innerHTML = '<div class="aotw"><div>'+coverHTML(t2)+'</div><div class="aotw-body"><span class="k">Artist of the Week</span><h3>'+esc(t2.artist)+'</h3><p>First tape on the board: <strong style="color:var(--orange)">'+esc(t2.title)+'</strong>. Plays and downloads this week decide who holds the crown — run it up.</p><button class="btn btn-orange" type="button" id="aotwOpen">Play the Tape</button></div></div>';
+      aw.innerHTML = '<div class="aotw"><div>'+coverHTML(t2)+'</div><div class="aotw-body"><span class="k">Artist of the Week</span><h3><span class="artist-link" data-artist="'+esc(t2.handle)+'">'+esc(t2.artist)+'</span></h3><p>First tape on the board: <strong style="color:var(--orange)">'+esc(t2.title)+'</strong>. Plays and downloads this week decide who holds the crown — run it up.</p><button class="btn btn-orange" type="button" id="aotwOpen">Play the Tape</button></div></div>';
       $("aotwOpen").addEventListener("click", function(){ openTape(t2.id); });
     }
   }
@@ -1190,7 +1225,7 @@
       return;
     }
     wrap.innerHTML = soon.map(function(t){
-      return '<span class="soon-item">'+esc(t.title)+' — '+esc(t.artist)+' · <span class="cd" data-cd="'+t.id+'">'+countdownText(t.releaseAt-Date.now())+'</span></span>';
+      return '<span class="soon-item">'+esc(t.title)+' — <span class="artist-link" data-artist="'+esc(t.handle)+'">'+esc(t.artist)+'</span> · <span class="cd" data-cd="'+t.id+'">'+countdownText(t.releaseAt-Date.now())+'</span></span>';
     }).join("");
   }
   function rankedList(){
@@ -1230,8 +1265,8 @@
     r.list.forEach(function(t,i){
       var li = document.createElement("li");
       var b = document.createElement("button"); b.type="button"; b.className="rank-row";
-      b.innerHTML = '<span class="rank-num">'+(i+1)+'</span><span class="rank-info"><strong>'+esc(t.title)+'</strong><span>'+esc(t.artist)+' · '+esc(t.genre)+(t.city?' · '+esc(t.city):'')+'</span></span><span class="rank-stat">'+fmt(r.metric(t))+' '+r.label+'</span>';
-      b.addEventListener("click", function(){ openTape(t.id); });
+      b.innerHTML = '<span class="rank-num">'+(i+1)+'</span><span class="rank-info"><strong>'+esc(t.title)+'</strong><span><span class="artist-link" data-artist="'+esc(t.handle)+'">'+esc(t.artist)+'</span> · '+esc(t.genre)+(t.city?' · '+esc(t.city):'')+'</span></span><span class="rank-stat">'+fmt(r.metric(t))+' '+r.label+'</span>';
+      b.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; openTape(t.id); });
       li.appendChild(b); ol.appendChild(li);
     });
     wrap.innerHTML=""; wrap.appendChild(ol);
@@ -1240,7 +1275,13 @@
     if(!items.length) return '<p class="stats-empty">'+esc(emptyText)+'</p>';
     var html = '<ol class="stats-list">';
     items.slice(0,10).forEach(function(it,i){
-      html += '<li class="stats-row"><span class="rank-num">'+(i+1)+'</span><span class="stats-info"><strong>'+esc(it.primary)+'</strong>'+(it.secondary?'<span>'+esc(it.secondary)+'</span>':'')+'</span><span class="stats-count">'+exactNum(it.count)+'<small>'+esc(countLabel)+'</small></span></li>';
+      var secHTML = "";
+      if(it.secondary){
+        secHTML = (String(it.secondary).charAt(0)==="@")
+          ? '<span class="artist-link" data-artist="'+esc(it.secondary)+'">'+esc(it.secondary)+'</span>'
+          : '<span>'+esc(it.secondary)+'</span>';
+      }
+      html += '<li class="stats-row"><span class="rank-num">'+(i+1)+'</span><span class="stats-info"><strong>'+esc(it.primary)+'</strong>'+secHTML+'</span><span class="stats-count">'+exactNum(it.count)+'<small>'+esc(countLabel)+'</small></span></li>';
     });
     html += '</ol>';
     return html;
@@ -1302,6 +1343,49 @@
       if(el) el.innerHTML = statsListHTML(d.mostMixtapes.map(function(e){ return { primary:e.artist, secondary:e.handle||"", count:e.count }; }), "published tapes", "No published tapes yet this year — drafts don't count.");
     });
   }
+  /* ---------- Public artist profile (uses the backend's /api/artists/:handle) ---------- */
+  function openArtist(handle){
+    handle = normHandle(handle);
+    if(!handle || handle==="@") return;
+    currentArtistHandle = handle;
+    var d = $("tapeDialog");
+    if(d && d.open){ try{ d.close(); }catch(e){} }
+    showPage("artist");
+  }
+  function renderArtist(){
+    var wrap = $("artistWrap");
+    if(!wrap) return;
+    var handle = currentArtistHandle;
+    if(!handle || handle==="@"){
+      wrap.innerHTML = '<div class="empty"><h3>No artist selected</h3><p>Tap any artist name on a tape to open their profile.</p></div>';
+      return;
+    }
+    wrap.innerHTML = '<div class="empty"><h3>Loading '+esc(handle)+'…</h3><p>Pulling their tapes…</p></div>';
+    api("/api/artists/" + encodeURIComponent(handle.replace(/^@/,""))).then(function(r){
+      if(handle !== currentArtistHandle) return;
+      if(!r || !r.data || !r.data.ok){
+        wrap.innerHTML = '<div class="empty"><h3>No profile for '+esc(handle)+' yet.</h3><p>That artist hasn\'t uploaded a tape yet — artist profiles are created on first upload.</p><a class="btn btn-orange" href="/upload" data-nav="upload">Upload a Tape</a></div>';
+        return;
+      }
+      var p = r.data.profile, list = r.data.tapes || [], totals = r.data.totals || {};
+      document.title = p.name + " — Get Raw Mixtapes";
+      var tag = normCashtag(p.cashtag);
+      var html = '<div class="profile-head"><span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span><div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · Artist profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
+      html += '<p class="artist-page-stats"><span><b>'+exactNum(totals.publishedTapes||0)+'</b> tapes</span><span><b>'+exactNum(totals.plays||0)+'</b> plays</span><span><b>'+exactNum(totals.downloads||0)+'</b> downloads</span></p>';
+      if(tag) html += '<p style="margin:12px 0 0"><a class="btn small" href="'+cashUrl(tag)+'" target="_blank" rel="noopener" style="background:#00D632;border-color:#00D632;color:#06281A">Donate — Cash App '+esc(tag)+'</a> <span style="color:var(--muted);font-size:13.5px">Donations go straight to the artist via Cash App.</span></p>';
+      var mapped = list.map(function(rt){ return mapTape(rt); }).filter(Boolean);
+      mapped.forEach(function(m){ if(!findTape(m.id)){ tapes.push(m); ensureTapeStats(m); } });
+      if(!mapped.length){
+        html += '<div class="empty" style="margin-top:16px"><h3>No published tapes yet</h3><p>'+esc(p.name)+' has a profile but nothing live in the feed yet.</p></div>';
+      }
+      wrap.innerHTML = html;
+      if(mapped.length){
+        var grid = document.createElement("div"); grid.className="tape-grid"; grid.style.marginTop="16px";
+        mapped.forEach(function(m){ grid.appendChild(tapeCard(m)); });
+        wrap.appendChild(grid);
+      }
+    });
+  }
   function renderAll(){ renderTapes(); renderFeatured(); renderSoon(); renderRankings(); renderYearStats(); renderProfile(); }
 
   /* ---------- Tape dialog + player (audio now streams from the backend) ---------- */
@@ -1350,7 +1434,7 @@
     var live = isLive(tape) || dialogPreview;
     $("dlgTitle").textContent = tape.title;
     $("dlgCover").innerHTML = tape.cover ? '<img src="'+tape.cover+'" alt="Cover art for '+esc(tape.title)+'" style="width:110px;height:110px;border-radius:8px;object-fit:cover" />' : '<div style="width:110px;height:110px;border-radius:8px;background:var(--ink);position:relative;overflow:hidden">'+coverHTML(tape)+'</div>';
-    $("dlgMeta").innerHTML = esc(tape.artist)+' ('+esc(tape.handle)+')<br>'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'');
+    $("dlgMeta").innerHTML = '<a href="/artist/'+esc((tape.handle||"").replace(/^@/,""))+'" data-artist="'+esc(tape.handle)+'" class="artist-link">'+esc(tape.artist)+'</a> ('+esc(tape.handle)+')<br>'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'');
     $("dlgStats").textContent = fmt(tape.plays)+" plays · "+fmt(tape.downloads)+" downloads · "+tape.tracks.length+" tracks · Free download";
     $("dlgDesc").textContent = tape.desc || "";
     var lockHTML = "";
