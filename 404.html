@@ -585,6 +585,14 @@
           <input type="text" id="fCashtag" placeholder="e.g. $YourCashtag" autocomplete="off" />
           <span class="hint">Add your $cashtag and fans get a Donate button on your profile and your published tapes that links straight to your Cash App — donations go directly to you, never through Get Raw.</span>
         </div>
+        <div class="field">
+          <label for="fEmail">Email (optional)</label>
+          <input type="email" id="fEmail" placeholder="e.g. you@example.com" autocomplete="email" />
+          <span class="hint">Private — never shown to anyone. Only used to send you Get Raw promotions if you tick the box below.</span>
+        </div>
+        <div class="field">
+          <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400"><input type="checkbox" id="fPromo" style="margin-top:3px" /> Send me promotions from Get Raw</label>
+        </div>
         <div class="field full">
           <label for="fDesc">Description</label>
           <textarea id="fDesc" placeholder="What is this tape? Who produced it, who's featured, what should fans know?"></textarea>
@@ -628,7 +636,9 @@
           <div class="field" style="margin-bottom:12px"><label for="cHandle">@handle *</label><input type="text" id="cHandle" placeholder="e.g. @marcusl" autocomplete="username" /></div>
           <div class="field" style="margin-bottom:12px"><label for="cPassword">Password *</label><input type="password" id="cPassword" placeholder="Create a password" autocomplete="new-password" /><span class="hint">At least 6 characters. You'll sign in with your @handle and this password.</span></div>
           <div class="field" style="margin-bottom:12px"><label for="cPassword2">Confirm password *</label><input type="password" id="cPassword2" placeholder="Type it again" autocomplete="new-password" /></div>
-          <div class="field" style="margin-bottom:16px"><label for="cCity">City</label><input type="text" id="cCity" placeholder="e.g. Boston, MA" /></div>
+          <div class="field" style="margin-bottom:12px"><label for="cCity">City</label><input type="text" id="cCity" placeholder="e.g. Boston, MA" /></div>
+          <div class="field" style="margin-bottom:12px"><label for="cEmail">Email (optional)</label><input type="email" id="cEmail" placeholder="e.g. you@example.com" autocomplete="email" /><span class="hint">Private — never shown to anyone. Only used for Get Raw promotions if you tick the box below.</span></div>
+          <div class="field" style="margin-bottom:16px"><label style="display:flex;gap:8px;align-items:flex-start;font-weight:400"><input type="checkbox" id="cPromo" style="margin-top:3px" /> Send me promotions from Get Raw</label></div>
           <button type="submit" class="btn btn-orange">Create Profile</button>
           <div class="form-msg" id="createMsg" role="status"></div>
         </form>
@@ -771,8 +781,7 @@
 
 <div class="toast" id="toast" role="status"></div>
 
-<script>
-(function(){
+<script>(function(){
   "use strict";
   /* =====================================================================
      Get Raw Mixtapes — frontend, shared-backend edition.
@@ -1416,6 +1425,9 @@
     form.append("dj", $("fDj").value.trim()); form.append("genre", genre);
     form.append("city", $("fCity").value.trim()); form.append("desc", $("fDesc").value.trim());
     form.append("cashtag", normCashtag($("fCashtag").value));
+    var upEmail = $("fEmail") ? $("fEmail").value.trim() : "";
+    if(upEmail) form.append("email", upEmail);
+    if($("fPromo") && $("fPromo").checked) form.append("promoOptIn", "1");
     if(acctPw) form.append("password", acctPw);
     trackFiles.forEach(function(f,i){
       form.append("tracks", f, f.name);
@@ -1503,7 +1515,11 @@
     if(!pw){ showMsg("createMsg", false, "Create a password for your account — you'll sign in with your @handle and password."); return; }
     if(pw.length < 6){ showMsg("createMsg", false, "Your password needs at least 6 characters."); return; }
     if(pw !== pw2){ showMsg("createMsg", false, "The two passwords don't match — type the same password in both fields."); return; }
-    api("/api/auth/register", { method:"POST", body: JSON.stringify({ name: $("cName").value.trim() || handle.slice(1), handle: handle, password: pw, city: $("cCity").value.trim() }) }).then(function(r){
+    var cEmail = $("cEmail") ? $("cEmail").value.trim() : "";
+    var cPromo = $("cPromo") ? $("cPromo").checked : false;
+    if(cEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cEmail)){ showMsg("createMsg", false, "Enter a valid email address — or leave it blank."); return; }
+    if(cPromo && !cEmail){ showMsg("createMsg", false, "Add an email address to get promotions from Get Raw."); return; }
+    api("/api/auth/register", { method:"POST", body: JSON.stringify({ name: $("cName").value.trim() || handle.slice(1), handle: handle, password: pw, city: $("cCity").value.trim(), email: cEmail, promoOptIn: cPromo }) }).then(function(r){
       if(!r){ showMsg("createMsg", false, "Couldn't reach the Get Raw server — try again in a bit."); return; }
       if(r.status !== 201 || !r.data.ok){ showMsg("createMsg", false, r.data.error || "Couldn't create that profile."); return; }
       setToken(r.data.token);
@@ -1664,6 +1680,10 @@
       else html += '<ul class="mini-list">'+up.map(mtItem).join("")+'</ul>';
       html += '<p style="margin:14px 0 0"><a class="btn btn-orange small" href="/upload" data-nav="upload">Add another tape to this profile</a></p></div>';
     }
+    html += '<div class="form-card" style="margin-top:16px"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 8px;text-transform:uppercase">Email &amp; promotions</h3>';
+    html += '<p style="color:var(--muted);margin:0 0 10px;font-size:14.5px">Optional — your email is private and never shown to anyone. We only use it to send you Get Raw promotions, and only if you tick the box.</p>';
+    html += '<div class="mt-actions"><input type="email" id="profileEmail" placeholder="you@example.com" value="'+esc(p.email||"")+'" aria-label="Your email address (optional)" /><button class="btn btn-dark small" type="button" data-save-email="1">Save email</button></div>';
+    html += '<label style="display:flex;gap:8px;align-items:flex-start;margin:12px 0 0;font-size:14.5px"><input type="checkbox" id="profilePromo" style="margin-top:3px"'+(p.promoOptIn?" checked":"")+' /> Send me promotions from Get Raw</label></div>';
     html += '<div class="form-card" style="margin-top:16px;border-color:#B3261E"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 8px;text-transform:uppercase;color:#B3261E">Danger zone</h3>';
     html += '<p style="color:var(--muted);margin:0 0 12px;font-size:14.5px">Delete your account for good — this removes your profile and every tape on it, and signs you out. To remove just one tape, use Delete on that tape in My Tapes instead.</p>';
     html += '<button class="btn btn-danger small" type="button" data-delete-account="1">Delete my account</button></div>';
@@ -1692,6 +1712,21 @@
     });
     wrap.querySelectorAll("[data-delete-account]").forEach(function(b){
       b.addEventListener("click", function(){ deleteAccount(); });
+    });
+    wrap.querySelectorAll("[data-save-email]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var inp = $("profileEmail");
+        var email = inp ? inp.value.trim() : "";
+        var promo = $("profilePromo") ? $("profilePromo").checked : false;
+        if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast("Enter a valid email address — or leave it blank."); return; }
+        if(promo && !email){ toast("Add an email address to get promotions from Get Raw."); return; }
+        api("/api/auth/me", { method:"PATCH", body: JSON.stringify({ email: email, promoOptIn: promo }) }).then(function(r){
+          if(!r || r.status!==200 || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't save that email."); return; }
+          if(currentProfile){ currentProfile.user.email = r.data.user.email || ""; currentProfile.user.promoOptIn = !!r.data.user.promoOptIn; }
+          toast(email ? "Email saved." + (promo ? " You're on the promotions list." : "") : "Email removed — you're off the promotions list.");
+          renderAll();
+        });
+      });
     });
     wrap.querySelectorAll("[data-save-cashtag]").forEach(function(b){
       b.addEventListener("click", function(){
@@ -1777,7 +1812,6 @@
   }
   boot();
 })();
-
 </script>
 </body>
 </html>
