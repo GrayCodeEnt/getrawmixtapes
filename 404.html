@@ -83,6 +83,8 @@
   .btn-dark{background:var(--ink);color:var(--paper);border-color:var(--ink)}
   .btn-outline{background:transparent;color:var(--text);border-color:var(--text)}
   .btn-outline:hover{border-color:var(--orange);color:var(--orange-dark)}
+  .btn-danger{background:#B3261E;color:#fff;border-color:#B3261E}
+  .btn-danger:hover{background:#8F1D17;border-color:#8F1D17}
   .btn.small{padding:6px 12px;min-height:40px;font-size:15px}
   .user-chip{display:none;align-items:center;gap:8px;background:var(--chip);color:var(--paper);border:1px solid #3a3a3a;border-radius:999px;padding:5px 12px 5px 6px;font-weight:600;font-size:14px}
   .user-chip .avatar{width:30px;height:30px;border-radius:50%;background:var(--orange);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:"Anton",sans-serif;font-size:14px}
@@ -1582,6 +1584,35 @@
       renderAll();
     });
   }
+  function deleteTape(id){
+    var t = findTape(id); if(!t || t.handle!==currentUser) return;
+    if(!window.confirm("Delete “"+t.title+"” forever? This removes the tape, its audio and cover from the site.")) return;
+    api("/api/tapes/"+id, { method:"DELETE" }).then(function(r){
+      if(!r){ toast("Couldn't reach the server — try again in a bit."); return; }
+      if(r.status!==200 || !r.data.ok){ toast(r.data.error || "Couldn't delete that tape."); return; }
+      tapes = tapes.filter(function(x){ return x.id!==id; });
+      if(currentProfile){
+        currentProfile.uploadIds = (currentProfile.uploadIds || []).filter(function(x){ return x!==id; });
+        currentProfile.downloadIds = (currentProfile.downloadIds || []).filter(function(x){ return x!==id; });
+      }
+      saveCache();
+      toast("“"+t.title+"” is deleted.");
+      refreshFeed().then(function(){ renderAll(); });
+    });
+  }
+  function deleteAccount(){
+    if(!currentUser) return;
+    if(!window.confirm("Delete your account forever? This deletes your profile, all your tapes, and signs you out. This can't be undone.")) return;
+    api("/api/auth/me", { method:"DELETE" }).then(function(r){
+      if(!r){ toast("Couldn't reach the server — try again in a bit."); return; }
+      if(r.status!==200 || !r.data.ok){ toast(r.data.error || "Couldn't delete that account."); return; }
+      setToken("");
+      try{ window.localStorage.removeItem(CACHE_KEY); }catch(e){}
+      currentUser = null; currentProfile = null;
+      toast("Your account is deleted.");
+      refreshFeed().then(function(){ showPage("home", true); renderAll(); });
+    });
+  }
   function renderProfile(){
     var chip = $("userChip"), link = $("signInLink");
     var p = currentProfile ? currentProfile.user : null;
@@ -1608,6 +1639,7 @@
       } else {
         actions += '<button class="btn btn-dark small" type="button" data-open="'+t.id+'">Open Tape</button>';
       }
+      actions += '<button class="btn btn-danger small" type="button" data-delete-tape="'+t.id+'">Delete</button>';
       return '<li class="mt-item"><div class="mt-top"><span><strong>'+esc(t.title)+'</strong> · '+fmt(t.plays)+' plays · '+fmt(t.downloads)+' downloads · '+t.tracks.length+' tracks</span><span class="status-pill '+pillCls+'">'+status+'</span></div><div class="mt-actions">'+actions+'</div></li>';
     }
     wrap.hidden=false;
@@ -1632,6 +1664,9 @@
       else html += '<ul class="mini-list">'+up.map(mtItem).join("")+'</ul>';
       html += '<p style="margin:14px 0 0"><a class="btn btn-orange small" href="/upload" data-nav="upload">Add another tape to this profile</a></p></div>';
     }
+    html += '<div class="form-card" style="margin-top:16px;border-color:#B3261E"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 8px;text-transform:uppercase;color:#B3261E">Danger zone</h3>';
+    html += '<p style="color:var(--muted);margin:0 0 12px;font-size:14.5px">Delete your account for good — this removes your profile and every tape on it, and signs you out. To remove just one tape, use Delete on that tape in My Tapes instead.</p>';
+    html += '<button class="btn btn-danger small" type="button" data-delete-account="1">Delete my account</button></div>';
     wrap.innerHTML = html;
     wrap.querySelectorAll("[data-open]").forEach(function(b){
       b.addEventListener("click", function(){ openTape(b.getAttribute("data-open")); });
@@ -1651,6 +1686,12 @@
     });
     wrap.querySelectorAll("[data-todraft]").forEach(function(b){
       b.addEventListener("click", function(){ backToDraft(b.getAttribute("data-todraft")); });
+    });
+    wrap.querySelectorAll("[data-delete-tape]").forEach(function(b){
+      b.addEventListener("click", function(){ deleteTape(b.getAttribute("data-delete-tape")); });
+    });
+    wrap.querySelectorAll("[data-delete-account]").forEach(function(b){
+      b.addEventListener("click", function(){ deleteAccount(); });
     });
     wrap.querySelectorAll("[data-save-cashtag]").forEach(function(b){
       b.addEventListener("click", function(){
