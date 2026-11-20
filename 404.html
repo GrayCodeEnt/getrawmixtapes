@@ -318,14 +318,14 @@
   .icon-btn.dl{border-color:var(--orange);background:var(--orange);color:#fff}
   .icon-btn.dl:hover{background:var(--orange-dark)}
   .icon-btn[disabled]{opacity:.45;cursor:not-allowed}
-  .tape-panel{position:fixed;top:0;right:0;bottom:0;width:min(430px,94vw);background:var(--surface);color:var(--text);border-left:1px solid var(--line);box-shadow:-10px 0 34px rgba(0,0,0,.28);z-index:80;transform:translateX(105%);visibility:hidden;transition:transform .28s ease,visibility 0s linear .28s}
-  .tape-panel.open{transform:translateX(0);visibility:visible;transition:transform .28s ease}
-  .tape-panel-in{height:100%;overflow-y:auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom))}
-  .tape-panel-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
-  .tape-panel-head strong{display:block;font-size:19px;line-height:1.25}
-  .tape-panel-head span{color:var(--muted);font-size:14px}
-  .tape-panel .tracklist{margin-top:12px}
-  .panel-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:75}
+  .tape-page-head{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+  .tape-page-cover{flex:0 0 220px;width:220px;max-width:62vw;position:relative;aspect-ratio:1}
+  .tape-page-cover img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block}
+  .tape-page-cover .cover-fallback{border-radius:12px}
+  .tape-page-head h2{margin:0 0 4px;font-size:30px;line-height:1.15}
+  .tape-page-meta{color:var(--muted);font-size:15px}
+  .tape-page-stats{margin:8px 0 0;font-weight:700;font-size:15px}
+  .tape-page-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
   .inline-track.now-playing .tt{color:var(--orange-dark)}
   @media (prefers-color-scheme: dark){ .inline-track.now-playing .tt{color:var(--orange)} }
   .countdown{font-variant-numeric:tabular-nums;font-weight:700;color:var(--orange-dark)}
@@ -845,6 +845,10 @@
     <div class="empty"><h3>404 — Page not found</h3><p>Head back to the music — everything on the site is one tap away.</p></div>
     <p style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap"><a class="btn btn-orange" href="/" data-nav="home">Back Home</a><a class="btn btn-outline" href="/tapes" data-nav="tapes">Browse Tapes</a><a class="btn btn-outline" href="/rankings" data-nav="rankings">Rankings</a></p>
   </section>
+
+  <section id="tape" class="page" data-page="tape" aria-labelledby="tape-h">
+    <div id="tapeWrap"></div>
+  </section>
 </main>
 
 <footer>
@@ -892,34 +896,6 @@
     <button class="close" id="playerClose" type="button">Stop</button>
   </div>
 </div>
-
-<div class="panel-backdrop" id="tapePanelBackdrop" hidden></div>
-<aside class="tape-panel" id="tapePanel" aria-label="Tape songs">
-  <div class="tape-panel-in">
-    <div class="tape-panel-head">
-      <div><strong id="tapePanelTitle"></strong><span id="tapePanelSub"></span></div>
-      <button class="close" id="tapePanelClose" type="button" aria-label="Close">✕</button>
-    </div>
-    <div id="tapePanelBody"></div>
-  </div>
-</aside>
-
-<dialog id="tapeDialog" aria-labelledby="dlgTitle">
-  <div class="dlg-head">
-    <span id="dlgCover"></span>
-    <div style="min-width:0">
-      <h3 id="dlgTitle">Tape</h3>
-      <div id="dlgMeta" style="color:var(--muted);font-size:14.5px"></div>
-      <div id="dlgStats" style="margin-top:6px;font-weight:700;font-size:14px"></div>
-    </div>
-    <button class="dlg-close" id="dlgClose" type="button" aria-label="Close">✕</button>
-  </div>
-  <div class="dlg-body">
-    <p class="desc" id="dlgDesc"></p>
-    <div id="dlgLock"></div>
-    <ol class="tracklist" id="dlgTracks"></ol>
-  </div>
-</dialog>
 
 <dialog id="editDialog" aria-labelledby="editTitle">
   <div class="dlg-head">
@@ -1255,10 +1231,10 @@
   }
 
   /* ---------- Separate-page router — clean paths, no hash (unchanged) ---------- */
-  var PAGES = ["home","tapes","singles","featured","rankings","upload","sign-in","advertise","artist","feature"];
-  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","singles":"/singles","featured":"/featured","rankings":"/rankings","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist","feature":"/feature"};
+  var PAGES = ["home","tapes","singles","featured","rankings","upload","sign-in","advertise","artist","feature","tape"];
+  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","singles":"/singles","featured":"/featured","rankings":"/rankings","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist","feature":"/feature","tape":"/tape"};
   var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/singles":"singles","/featured":"featured","/rankings":"rankings","/upload":"upload","/sign-in":"sign-in","/signin":"sign-in","/profile":"sign-in","/advertise":"advertise"};
-  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","singles":"Get Raw Mixtapes — Singles","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist","not-found":"Get Raw Mixtapes — Page Not Found"};
+  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","singles":"Get Raw Mixtapes — Singles","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist","tape":"Get Raw Mixtapes — Tape","not-found":"Get Raw Mixtapes — Page Not Found"};
   var currentPage = "home";
   var currentArtistHandle = "";
   var currentFeatureHandle = "";
@@ -1271,6 +1247,7 @@
     var path = window.location.pathname || "/";
     if(path.indexOf("/artist/")===0) return "/";
     if(path.indexOf("/feature/")===0) return "/";
+    if(path.indexOf("/tape/")===0) return "/";
     if(path.charAt(path.length-1)==="/") return path;
     var parts = path.split("/");
     var last = parts[parts.length-1] || "";
@@ -1287,6 +1264,7 @@
     var base = basePath();
     if(name==="artist" && currentArtistHandle) return base + "artist/" + currentArtistHandle.replace(/^@/,"");
     if(name==="feature" && currentFeatureHandle) return base + "feature/" + currentFeatureHandle.replace(/^@/,"");
+    if(name==="tape" && currentTapeId) return base + "tape/" + currentTapeId;
     return name==="home" ? base : base + name;
   }
   function pageFromPath(){
@@ -1297,6 +1275,7 @@
     if(parts.length>=2 && parts[0]==="artist" && parts[1]){ currentArtistHandle = normHandle(parts[1]); return "artist"; }
     if(parts.length>=2 && parts[0]==="artists" && parts[1]){ currentArtistHandle = normHandle(parts[1]); return "artist"; }
     if(parts.length>=2 && parts[0]==="feature" && parts[1]){ currentFeatureHandle = normHandle(parts[1]); return "feature"; }
+    if(parts.length>=2 && parts[0]==="tape" && parts[1]){ currentTapeId = parts[1]; return "tape"; }
     if(!last || last.indexOf(".")>=0) page = "home";
     else if(PAGES.indexOf(last)>=0) page = last;
     else if(last==="profile") page = "sign-in";
@@ -1308,9 +1287,6 @@
   function showPage(name, updateUrl){
     name = normalizePage(name);
     currentPage = name;
-    closeTapePanel();
-    var td = $("tapeDialog");
-    if(td && td.open) closeDlg("tapeDialog");
     document.querySelectorAll(".page").forEach(function(p){ p.classList.toggle("active", p.getAttribute("data-page")===name); });
     document.querySelectorAll("[data-nav]").forEach(function(a){
       if(a.classList && a.parentElement && a.parentElement.classList.contains("main-nav")) a.classList.toggle("active", a.getAttribute("data-nav")===name);
@@ -1328,6 +1304,7 @@
     document.title = PAGE_TITLES[name] || PAGE_TITLES.home;
     if(name==="artist") renderArtist();
     if(name==="feature") renderFeature();
+    if(name==="tape") renderTapePage();
   }
   document.addEventListener("click", function(ev){
     var a = ev.target.closest ? ev.target.closest('a[data-nav], a[href^="/"]') : null;
@@ -1339,7 +1316,7 @@
     ev.preventDefault();
     showPage(page);
   });
-  window.addEventListener("popstate", function(){ var p = pageFromPath(); if(p!==currentPage || p==="artist") showPage(p, false); });
+  window.addEventListener("popstate", function(){ var p = pageFromPath(); if(p!==currentPage || p==="artist" || p==="tape") showPage(p, false); });
   document.addEventListener("click", function(ev){
     var el = ev.target.closest ? ev.target.closest("[data-artist]") : null;
     if(!el) return;
@@ -1370,14 +1347,6 @@
     ev.preventDefault();
     openFeature(el.getAttribute("data-feature"));
   });
-  // A non-modal dialog does not close on Escape by itself — wire it up
-  // so the tape pop-up can always be dismissed from the keyboard.
-  document.addEventListener("keydown", function(ev){
-    if(ev.key!=="Escape") return;
-    var d = $("tapeDialog");
-    if(d && d.open) closeDlg("tapeDialog");
-  });
-
   /* ---------- Rendering (same look, data now from the server) ---------- */
   function coverHTML(tape, cls){
     if(tape.cover) return '<img src="'+tape.cover+'" alt="Cover art for '+esc(tape.title)+' by '+esc(tape.artist)+'" loading="lazy" />';
@@ -1400,7 +1369,7 @@
       '<span class="artist artist-link" data-artist="'+esc(tape.handle||"")+'" role="link" tabindex="0" title="View '+esc(tape.artist)+' profile">'+artistAvatarHTML(tape)+esc(tape.artist)+'</span>'+
       '<span class="sub">'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'')+'</span>'+
       '<span class="tape-stats" data-tape-stats="'+tape.id+'"><span>▶ '+pl(tape.plays,"play")+'</span><span>⬇ '+pl(tape.downloads,"download")+'</span><span>'+pl(tape.tracks.length,"track")+'</span></span></span>';
-    btn.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; if(btn._artistInline){ btn._artistInline(); return; } openTape(tape.id); });
+    btn.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; if(btn._artistInline){ btn._artistInline(); return; } openTapePage(tape.id); });
     return btn;
   }
   function visibleTapes(){
@@ -1500,11 +1469,11 @@
     if(live.length && (live[0].plays+live[0].downloads)>0){
       var t = live[0];
       aw.innerHTML = '<div class="aotw"><div>'+coverHTML(t)+'</div><div class="aotw-body"><span class="k">Artist of the Week</span><h3><span class="artist-link" data-artist="'+esc(t.handle)+'">'+artistAvatarHTML(t)+esc(t.artist)+'</span></h3><p>Running the site right now with <strong style="color:var(--orange)">'+esc(t.title)+'</strong> — '+fmt(t.plays)+' plays and '+fmt(t.downloads)+' downloads and counting.</p><button class="btn btn-orange" type="button" id="aotwOpen">Play the Tape</button></div></div>';
-      $("aotwOpen").addEventListener("click", function(){ openTape(t.id); });
+      $("aotwOpen").addEventListener("click", function(){ openTapePage(t.id); });
     } else if(live.length){
       var t2 = live[0];
       aw.innerHTML = '<div class="aotw"><div>'+coverHTML(t2)+'</div><div class="aotw-body"><span class="k">Artist of the Week</span><h3><span class="artist-link" data-artist="'+esc(t2.handle)+'">'+artistAvatarHTML(t2)+esc(t2.artist)+'</span></h3><p>First tape on the board: <strong style="color:var(--orange)">'+esc(t2.title)+'</strong>. Plays and downloads this week decide who holds the crown — run it up.</p><button class="btn btn-orange" type="button" id="aotwOpen">Play the Tape</button></div></div>';
-      $("aotwOpen").addEventListener("click", function(){ openTape(t2.id); });
+      $("aotwOpen").addEventListener("click", function(){ openTapePage(t2.id); });
     } else if(!feedLoaded){
       aw.innerHTML = '<div class="empty"><h3>Loading Artist of the Week…</h3><p>Pulling the latest drops…</p></div>';
     }
@@ -1562,7 +1531,7 @@
       var li = document.createElement("li");
       var b = document.createElement("button"); b.type="button"; b.className="rank-row";
       b.innerHTML = '<span class="rank-num">'+(i+1)+'</span><span class="rank-info"><strong>'+esc(t.title)+'</strong><span><span class="artist-link" data-artist="'+esc(t.handle)+'">'+artistAvatarHTML(t)+esc(t.artist)+'</span> · '+esc(t.genre)+(t.city?' · '+esc(t.city):'')+'</span></span><span class="rank-stat">'+fmt(r.metric(t))+' '+r.label+'</span>';
-      b.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; openTape(t.id); });
+      b.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; openTapePage(t.id); });
       li.appendChild(b); ol.appendChild(li);
     });
     wrap.innerHTML=""; wrap.appendChild(ol);
@@ -1672,8 +1641,6 @@
     handle = normHandle(handle);
     if(!handle || handle==="@") return;
     currentArtistHandle = handle;
-    var d = $("tapeDialog");
-    if(d && d.open){ try{ d.close(); }catch(e){} }
     showPage("artist");
   }
   // Global search — the bar at the top of every page. Fans type an artist
@@ -1751,49 +1718,6 @@
   // Artist page: tapping a tape slides its songs in from the side — a
   // side panel, not a drop-down under the card and not a pop-up. Play
   // All runs the tape straight through; each song also plays on its own.
-  function openTapePanel(tape){
-    var live = isLive(tape);
-    $("tapePanelTitle").textContent = tape.title;
-    $("tapePanelSub").textContent = tape.artist+" · "+pl(tape.tracks.length,"song")+" · "+pl(tape.plays,"play")+" · "+pl(tape.downloads,"download");
-    $("tapePanel").setAttribute("data-tape", tape.id);
-    var body = $("tapePanelBody");
-    body.innerHTML = "";
-    var head = document.createElement("div");
-    head.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap";
-    var playAll = document.createElement("button"); playAll.type="button"; playAll.className="btn btn-orange small"; playAll.textContent="▶ Play All"; playAll.disabled=!live;
-    playAll.addEventListener("click", function(){
-      if(!tape.tracks.length) return;
-      playQueue = { tape: tape, idx: 0 };
-      playTrack(tape, tape.tracks[0], 0);
-    });
-    head.appendChild(playAll);
-    var dlAll = document.createElement("button"); dlAll.type="button"; dlAll.className="btn btn-outline small"; dlAll.textContent="⬇ Download All"; dlAll.disabled=!live;
-    dlAll.addEventListener("click", function(){ downloadAll(tape); });
-    head.appendChild(dlAll);
-    body.appendChild(head);
-    var ol = document.createElement("ol"); ol.className="tracklist";
-    tape.tracks.forEach(function(track, idx){
-      var li = document.createElement("li"); li.className="inline-track"; li.setAttribute("data-tape", tape.id); li.setAttribute("data-idx", String(idx));
-      li.innerHTML = '<span class="tn">'+(idx+1)+'</span><span class="tt">'+esc(track.title)+'</span>';
-      var pb = document.createElement("button"); pb.type="button"; pb.className="icon-btn inline-play"; pb.textContent="▶ Play"; pb.disabled=!live;
-      pb.addEventListener("click", function(){ playQueue = null; playTrack(tape, track, idx); });
-      var db = document.createElement("button"); db.type="button"; db.className="icon-btn dl"; db.textContent="⬇ Free"; db.disabled=!live;
-      db.addEventListener("click", function(){ downloadTrack(tape, track); });
-      li.appendChild(pb); li.appendChild(db); ol.appendChild(li);
-    });
-    body.appendChild(ol);
-    if(tape.desc){ var d = document.createElement("p"); d.style.cssText = "color:var(--muted);font-size:14.5px;margin:14px 0 0"; d.textContent = tape.desc; body.appendChild(d); }
-    $("tapePanel").classList.add("open");
-    $("tapePanelBackdrop").hidden = false;
-    updateInlineNowPlaying();
-  }
-  function closeTapePanel(){
-    $("tapePanel").classList.remove("open");
-    $("tapePanelBackdrop").hidden = true;
-  }
-  $("tapePanelClose").addEventListener("click", closeTapePanel);
-  $("tapePanelBackdrop").addEventListener("click", closeTapePanel);
-  document.addEventListener("keydown", function(ev){ if(ev.key==="Escape") closeTapePanel(); });
   function renderArtist(){
     var wrap = $("artistWrap");
     if(!wrap) return;
@@ -1838,7 +1762,7 @@
         mapped.forEach(function(m){
           var card = tapeCard(m);
           grid.appendChild(card);
-          card._artistInline = function(){ openTapePanel(m); };
+          card._artistInline = function(){ openTapePage(m.id); };
         });
         wrap.appendChild(grid);
       }
@@ -1907,9 +1831,9 @@
     list.forEach(function(t){ grid.appendChild(tapeCard(t)); });
     wrap.innerHTML=""; wrap.appendChild(grid);
   }
-  function renderAll(){ renderTapes(); renderFeatured(); renderFeaturedArtists(); renderSoon(); renderRankings(); renderYearStats(); renderProfile(); renderNewDrops(); renderSingles(); renderSinglesPreview(); }
+  function renderAll(){ renderTapes(); renderFeatured(); renderFeaturedArtists(); renderSoon(); renderRankings(); renderYearStats(); renderProfile(); renderNewDrops(); renderSingles(); renderSinglesPreview(); if(currentPage==="tape") renderTapePage(); }
 
-  /* ---------- Tape dialog + player (audio now streams from the backend) ---------- */
+  /* ---------- Tape page + player (audio now streams from the backend) ---------- */
   var audio = $("audioEl");
   // Play All queue: when a tape is played straight through, the next
   // song starts when the current one ends. Picking one song by itself
@@ -1955,10 +1879,10 @@
   // After a play or download lands, refresh the counts on every tape
   // card showing this tape — the feed and the artist page are separate
   // renders, so renderAll alone leaves the artist page stale until a
-  // reload — and in the side panel header when it is open for this tape.
+  // reload — and on the tape page itself when it is showing this tape.
   // Keep the global tapes array in sync with the tape object the player
   // is holding: artist-page tapes are mapped copies, so a play from the
-  // panel would otherwise leave the feed's copy stale until a reload.
+  // artist page would otherwise leave the feed's copy stale until a reload.
   function syncTapeCounts(tape){
     tapes.forEach(function(t){
       if(t.id===tape.id){ t.plays = tape.plays; t.downloads = tape.downloads; }
@@ -1969,9 +1893,9 @@
     document.querySelectorAll('[data-tape-stats="'+tape.id+'"]').forEach(function(el){
       el.innerHTML = '<span>▶ '+pl(tape.plays,"play")+'</span><span>⬇ '+pl(tape.downloads,"download")+'</span><span>'+pl(tape.tracks.length,"track")+'</span>';
     });
-    var panel = $("tapePanel");
-    if(panel && panel.classList.contains("open") && panel.getAttribute("data-tape")===tape.id){
-      $("tapePanelSub").textContent = tape.artist+" · "+pl(tape.tracks.length,"song")+" · "+pl(tape.plays,"play")+" · "+pl(tape.downloads,"download");
+    if(currentPage==="tape" && currentTapeId===tape.id){
+      var ts = $("tapePageStats");
+      if(ts) ts.textContent = pl(tape.plays,"play")+" · "+pl(tape.downloads,"download")+" · "+pl(tape.tracks.length,"track")+" · Free download";
     }
     // The artist page's totals strip is rendered once by renderArtist,
     // so recompute it from the (now synced) tapes array. Absolute sums,
@@ -2021,10 +1945,10 @@
           if(r && r.status===200 && r.data && r.data.ok){
             tape.plays = r.data.plays; tape.downloads = r.data.downloads;
             updateCardStats(tape);
-            renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
+            renderAll();
           }
         });
-        tape.plays++; updateCardStats(tape); renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
+        tape.plays++; updateCardStats(tape); renderAll();
       }
     }).catch(function(){ playerIsPlaying = false; updatePlayerControls(); toast("Tap play on the player to start the track."); });
   }
@@ -2036,7 +1960,7 @@
         tape.plays = r.data.plays; tape.downloads = r.data.downloads;
         if(currentProfile && currentProfile.downloadIds.indexOf(tape.id)<0) currentProfile.downloadIds.push(tape.id);
         updateCardStats(tape);
-        renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
+        renderAll();
       }
     });
     recordDownloadLocal(tape);
@@ -2045,8 +1969,8 @@
     a.href = track.downloadUrl || track.url; a.download = track.fileName || (track.title+".mp3");
     document.body.appendChild(a); a.click(); a.remove();
     toast("Downloading “"+track.title+"” — saved to your profile.");
-    refreshMe().then(function(){ renderAll(); if(currentTapeId===tape.id) fillDialog(tape); });
-    renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
+    refreshMe().then(function(){ renderAll(); });
+    renderAll();
   }
   function downloadAll(tape){
     // The whole tape as one file: count the download on the server
@@ -2058,7 +1982,7 @@
         tape.plays = r.data.plays; tape.downloads = r.data.downloads;
         if(currentProfile && currentProfile.downloadIds.indexOf(tape.id)<0) currentProfile.downloadIds.push(tape.id);
         updateCardStats(tape);
-        renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
+        renderAll();
       }
     });
     recordDownloadLocal(tape);
@@ -2067,60 +1991,96 @@
     a.download = (tape.title || "mixtape") + ".zip";
     document.body.appendChild(a); a.click(); a.remove();
     toast("Downloading the whole tape — "+tape.tracks.length+" songs in one file.");
-    refreshMe().then(function(){ renderAll(); if(currentTapeId===tape.id) fillDialog(tape); });
-    renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
+    refreshMe().then(function(){ renderAll(); });
+    renderAll();
   }
-  var dialogPreview = false;
-  function fillDialog(tape){
-    var live = isLive(tape) || dialogPreview;
-    $("dlgTitle").textContent = tape.title;
-    $("dlgCover").innerHTML = tape.cover ? '<img src="'+tape.cover+'" alt="Cover art for '+esc(tape.title)+'" style="width:110px;height:110px;border-radius:8px;object-fit:cover" />' : '<div style="width:110px;height:110px;border-radius:8px;background:var(--ink);position:relative;overflow:hidden">'+coverHTML(tape)+'</div>';
-    $("dlgMeta").innerHTML = '<a href="/artist/'+esc((tape.handle||"").replace(/^@/,""))+'" data-artist="'+esc(tape.handle)+'" class="artist-link">'+artistAvatarHTML(tape)+esc(tape.artist)+'</a> ('+esc(tape.handle)+')<br>'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'');
-    $("dlgStats").textContent = pl(tape.plays,"play")+" · "+pl(tape.downloads,"download")+" · "+pl(tape.tracks.length,"track")+" · Free download";
-    $("dlgDesc").textContent = tape.desc || "";
-    var lockHTML = "";
-    if(!isLive(tape) && dialogPreview) lockHTML = '<p class="countdown">Private preview — only you can see this tape. It is not in the feed and fans cannot see it.</p>';
-    else if(!isLive(tape)) lockHTML = '<p class="countdown">Premieres in <span data-cd="'+tape.id+'">'+countdownText(tape.releaseAt-Date.now())+'</span> — tracks unlock at drop time.</p>';
-    if(isLive(tape) || dialogPreview){
+  /* ---------- Tape page (a full page at /tape/<id> — no pop-up, no side panel) ---------- */
+  var tapePageLoading = null; // tape id currently being fetched for a deep link
+  var tapePageMissing = {}; // ids the server already 404'd — don't re-fetch them
+  function renderTapePage(){
+    var wrap = $("tapeWrap");
+    if(!wrap) return;
+    var id = currentTapeId;
+    if(!id){
+      wrap.innerHTML = '<div class="empty"><h3>No tape selected</h3><p>Pick a tape from the feed and it opens here.</p><a class="btn btn-orange" href="/tapes" data-nav="tapes">Browse Tapes</a></div>';
+      return;
+    }
+    var tape = findTape(id);
+    if(!tape){
+      if(tapePageMissing[id]){
+        wrap.innerHTML = '<div class="empty"><h3>That tape isn\'t here.</h3><p>It may have been removed, or the link is wrong.</p><a class="btn btn-orange" href="/tapes" data-nav="tapes">Browse Tapes</a></div>';
+        return;
+      }
+      // Deep link (or a tape the feed hasn't loaded yet): fetch it straight
+      // from the server. The server answers 404 for drafts you don't own.
+      wrap.innerHTML = '<div class="empty"><h3>Loading tape…</h3><p>Pulling the songs…</p></div>';
+      if(tapePageLoading!==id){
+        tapePageLoading = id;
+        api("/api/tapes/"+encodeURIComponent(id)).then(function(r){
+          tapePageLoading = null;
+          if(r && r.data && r.data.ok && r.data.tape){
+            var m = mapTape(r.data.tape);
+            if(m && !findTape(m.id)){ tapes.push(m); ensureTapeStats(m); }
+          } else {
+            tapePageMissing[id] = true;
+          }
+          if(currentPage==="tape" && currentTapeId===id) renderTapePage();
+        });
+      }
+      return;
+    }
+    // Owner-only preview: a draft or scheduled tape shows the private
+    // preview banner and its tracks play for the owner only.
+    var preview = !isLive(tape) && tape.handle===currentUser;
+    var live = isLive(tape) || preview;
+    document.title = tape.title + " — Get Raw Mixtapes";
+    var html = '<p style="margin:0 0 14px"><a href="/tapes" data-nav="tapes" class="artist-link">← All Tapes</a></p>'
+      + '<div class="tape-page-head"><div class="tape-page-cover">'+coverHTML(tape)+'</div>'
+      + '<div style="min-width:0;flex:1 1 280px"><h2 id="tape-h">'+esc(tape.title)+'</h2>'
+      + '<div class="tape-page-meta"><a href="/artist/'+esc((tape.handle||"").replace(/^@/,""))+'" data-artist="'+esc(tape.handle)+'" class="artist-link">'+artistAvatarHTML(tape)+esc(tape.artist)+'</a> ('+esc(tape.handle)+')<br>'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'')+'</div>'
+      + '<p class="tape-page-stats" id="tapePageStats">'+pl(tape.plays,"play")+" · "+pl(tape.downloads,"download")+" · "+pl(tape.tracks.length,"track")+" · Free download"+'</p>'
+      + '<div class="tape-page-actions">'
+      + '<button class="btn btn-orange" id="tapePagePlayAll" type="button"'+(live?"":" disabled")+'>▶ Play All</button>'
+      + (isLive(tape) ? '<button class="btn btn-outline" id="tapePageDownloadAll" type="button">⬇ Download All</button>' : '')
+      + '</div></div></div>';
+    if(tape.desc) html += '<p style="color:var(--muted);margin:16px 0 0">'+esc(tape.desc)+'</p>';
+    if(!isLive(tape) && preview) html += '<p class="countdown" style="margin:14px 0 0">Private preview — only you can see this tape. It is not in the feed and fans cannot see it.</p>';
+    else if(!isLive(tape)) html += '<p class="countdown" style="margin:14px 0 0">Premieres in <span data-cd="'+tape.id+'">'+countdownText(tape.releaseAt-Date.now())+'</span> — tracks unlock at drop time.</p>';
+    if(live){
       var db = donateBtnHTML(tape, true);
-      if(db) lockHTML += '<p style="margin:10px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+db+'<span style="color:var(--muted);font-size:13.5px">Donations go straight to the artist via Cash App.</span></p>';
+      if(db) html += '<p style="margin:14px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+db+'<span style="color:var(--muted);font-size:13.5px">Donations go straight to the artist via Cash App.</span></p>';
     }
-    if(isLive(tape)){
-      lockHTML += '<p style="margin:10px 0 0"><button class="btn btn-orange small" id="dlgDownloadAll" type="button">⬇ Download All</button> <span style="color:var(--muted);font-size:13.5px">The whole tape as one file.</span></p>';
-    }
-    $("dlgLock").innerHTML = lockHTML;
-    var da = $("dlgDownloadAll");
-    if(da) da.addEventListener("click", function(){ downloadAll(tape); });
-    var ol = $("dlgTracks"); ol.innerHTML="";
+    wrap.innerHTML = html;
+    var ol = document.createElement("ol"); ol.className="tracklist"; ol.id="tapePageTracks";
     tape.tracks.forEach(function(track, idx){
-      var li = document.createElement("li");
+      var li = document.createElement("li"); li.className="inline-track"; li.setAttribute("data-tape", tape.id); li.setAttribute("data-idx", String(idx));
       li.innerHTML = '<span class="tn">'+(idx+1)+'</span><span class="tt">'+esc(track.title)+'</span>';
-      var pb = document.createElement("button"); pb.type="button"; pb.className="icon-btn"; pb.textContent="▶ Play"; pb.disabled=!live;
+      var pb = document.createElement("button"); pb.type="button"; pb.className="icon-btn inline-play"; pb.textContent="▶ Play"; pb.disabled=!live;
       pb.addEventListener("click", function(){ playQueue = null; playTrack(tape, track, idx); });
-      var db = document.createElement("button"); db.type="button"; db.className="icon-btn dl"; db.textContent="⬇ Free"; db.disabled=!live;
-      db.addEventListener("click", function(){ downloadTrack(tape, track); });
-      li.appendChild(pb); li.appendChild(db); ol.appendChild(li);
+      var dl = document.createElement("button"); dl.type="button"; dl.className="icon-btn dl"; dl.textContent="⬇ Free"; dl.disabled=!live;
+      dl.addEventListener("click", function(){ downloadTrack(tape, track); });
+      li.appendChild(pb); li.appendChild(dl); ol.appendChild(li);
     });
+    wrap.appendChild(ol);
+    var pa = $("tapePagePlayAll");
+    if(pa) pa.addEventListener("click", function(){
+      if(!tape.tracks.length) return;
+      playQueue = { tape: tape, idx: 0 };
+      playTrack(tape, tape.tracks[0], 0);
+    });
+    var da = $("tapePageDownloadAll");
+    if(da) da.addEventListener("click", function(){ downloadAll(tape); });
+    updateInlineNowPlaying();
+  }
+  function openTapePage(id){
+    currentTapeId = id;
+    showPage("tape");
   }
   function closeDlg(id){
     var d = $(id); if(!d) return;
     if(typeof d.close === "function"){ try{ d.close(); return; }catch(e){} }
     d.removeAttribute("open");
   }
-  function openTape(id, preview){
-    var tape = tapes.filter(function(t){return t.id===id;})[0];
-    if(!tape) return;
-    dialogPreview = !!preview && tape.handle===currentUser;
-    currentTapeId = id;
-    fillDialog(tape);
-    var d = $("tapeDialog");
-    // Non-modal on purpose: the list stays open while the music plays,
-    // and the bottom player bar stays clickable. A modal dialog would
-    // swallow every tap outside it — including Stop, Prev and Next.
-    // (show() on an already-open dialog throws, so only open it once.)
-    if(!d.open){ if(typeof d.show==="function") d.show(); else d.setAttribute("open",""); }
-  }
-  $("dlgClose").addEventListener("click", function(){ closeDlg("tapeDialog"); });
   $("editClose").addEventListener("click", function(){ closeDlg("editDialog"); });
   $("eCancel").addEventListener("click", function(){ closeDlg("editDialog"); });
   $("eSave").addEventListener("click", function(){ saveEditTape(); });
@@ -2612,10 +2572,10 @@
     wrap.innerHTML = html;
     bindAvatarEdit(wrap);
     wrap.querySelectorAll("[data-open]").forEach(function(b){
-      b.addEventListener("click", function(){ openTape(b.getAttribute("data-open")); });
+      b.addEventListener("click", function(){ openTapePage(b.getAttribute("data-open")); });
     });
     wrap.querySelectorAll("[data-preview]").forEach(function(b){
-      b.addEventListener("click", function(){ openTape(b.getAttribute("data-preview"), true); });
+      b.addEventListener("click", function(){ openTapePage(b.getAttribute("data-preview")); });
     });
     wrap.querySelectorAll("[data-publish]").forEach(function(b){
       b.addEventListener("click", function(){ publishTape(b.getAttribute("data-publish")); });
