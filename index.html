@@ -298,10 +298,12 @@
   .pbtn:hover{border-color:var(--orange)}
   .pbtn.play{background:var(--orange);border-color:var(--orange);width:50px;height:50px;font-size:19px}
   .pbtn[disabled]{opacity:.4;cursor:not-allowed}
-  dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;border:none;border-radius:14px;padding:0;max-width:640px;width:calc(100% - 28px);max-height:calc(100dvh - 48px);overflow:auto;background:var(--surface);color:var(--text);box-shadow:0 24px 60px rgba(0,0,0,.45)}
+  dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;border:none;border-radius:14px;padding:0;max-width:640px;width:calc(100% - 28px);max-height:calc(100dvh - 48px);overflow:hidden;background:var(--surface);color:var(--text);box-shadow:0 24px 60px rgba(0,0,0,.45)}
+  dialog[open]{display:flex;flex-direction:column}
+  .dlg-body{overflow:auto;flex:1 1 auto;min-height:0}
   dialog::backdrop{background:rgba(5,5,5,.66)}
   #adForm{scroll-margin-top:96px}
-  .dlg-head{display:flex;gap:16px;padding:18px;align-items:flex-start;position:sticky;top:0;z-index:2;background:var(--surface)}
+  .dlg-head{display:flex;gap:16px;padding:18px;align-items:flex-start;flex:0 0 auto}
   .dlg-head img,.dlg-head .cover-fallback-wrap{width:110px;height:110px;border-radius:8px;object-fit:cover;flex:0 0 auto}
   .dlg-head h3{margin:0 0 2px;font-size:23px;line-height:1.15}
   .dlg-close{margin-left:auto;background:var(--surface-2);border:none;border-radius:8px;min-width:44px;min-height:44px;font-size:19px;cursor:pointer;color:var(--text)}
@@ -1914,7 +1916,16 @@
   // card showing this tape — the feed and the artist page are separate
   // renders, so renderAll alone leaves the artist page stale until a
   // reload — and in the side panel header when it is open for this tape.
-  function updateCardStats(tape, kind){
+  // Keep the global tapes array in sync with the tape object the player
+  // is holding: artist-page tapes are mapped copies, so a play from the
+  // panel would otherwise leave the feed's copy stale until a reload.
+  function syncTapeCounts(tape){
+    tapes.forEach(function(t){
+      if(t.id===tape.id){ t.plays = tape.plays; t.downloads = tape.downloads; }
+    });
+  }
+  function updateCardStats(tape){
+    syncTapeCounts(tape);
     document.querySelectorAll('[data-tape-stats="'+tape.id+'"]').forEach(function(el){
       el.innerHTML = '<span>▶ '+pl(tape.plays,"play")+'</span><span>⬇ '+pl(tape.downloads,"download")+'</span><span>'+pl(tape.tracks.length,"track")+'</span>';
     });
@@ -1923,18 +1934,21 @@
       $("tapePanelSub").textContent = tape.artist+" · "+pl(tape.tracks.length,"song")+" · "+pl(tape.plays,"play")+" · "+pl(tape.downloads,"download");
     }
     // The artist page's totals strip is rendered once by renderArtist,
-    // so bump it in place too when the tape's artist is the page open.
-    if(kind && currentArtistHandle && normHandle(tape.handle)===currentArtistHandle){
+    // so recompute it from the (now synced) tapes array. Absolute sums,
+    // never +1 bumps — this runs twice per play (local count, then the
+    // server confirmation) and a bump would double-count.
+    if(currentArtistHandle){
       var strip = document.querySelector(".artist-page-stats");
       if(strip){
-        var span = strip.querySelectorAll("span")[kind==="download" ? 2 : 1];
-        if(span){
-          var b = span.querySelector("b");
-          var n = b ? parseInt((b.textContent||"").replace(/[^0-9]/g,""), 10) || 0 : 0;
-          n++;
-          var word = kind==="download" ? "download" : "play";
-          span.innerHTML = "<b>"+exactNum(n)+"</b> "+(n===1?word:word+"s");
-        }
+        var tt = 0, tp = 0, td = 0;
+        tapes.forEach(function(t){
+          if(!isLive(t) || normHandle(t.handle)!==currentArtistHandle) return;
+          tt++; tp += Number(t.plays||0); td += Number(t.downloads||0);
+        });
+        var spans = strip.querySelectorAll("span");
+        if(spans[0]) spans[0].innerHTML = "<b>"+exactNum(tt)+"</b> "+(tt===1?"tape":"tapes");
+        if(spans[1]) spans[1].innerHTML = "<b>"+exactNum(tp)+"</b> "+(tp===1?"play":"plays");
+        if(spans[2]) spans[2].innerHTML = "<b>"+exactNum(td)+"</b> "+(td===1?"download":"downloads");
       }
     }
   }
@@ -1963,11 +1977,11 @@
         api("/api/tapes/"+tape.id+"/play", { method:"POST", body: JSON.stringify({ track: idx }) }).then(function(r){
           if(r && r.status===200 && r.data && r.data.ok){
             tape.plays = r.data.plays; tape.downloads = r.data.downloads;
-            updateCardStats(tape, "play");
+            updateCardStats(tape);
             renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
           }
         });
-        tape.plays++; updateCardStats(tape, "play"); renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
+        tape.plays++; updateCardStats(tape); renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
       }
     }).catch(function(){ playerIsPlaying = false; updatePlayerControls(); toast("Tap play on the player to start the track."); });
   }
@@ -1978,12 +1992,12 @@
       if(r && r.status===200 && r.data && r.data.ok){
         tape.plays = r.data.plays; tape.downloads = r.data.downloads;
         if(currentProfile && currentProfile.downloadIds.indexOf(tape.id)<0) currentProfile.downloadIds.push(tape.id);
-        updateCardStats(tape, "download");
+        updateCardStats(tape);
         renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
       }
     });
     recordDownloadLocal(tape);
-    tape.downloads++; updateCardStats(tape, "download");
+    tape.downloads++; updateCardStats(tape);
     var a = document.createElement("a");
     a.href = track.downloadUrl || track.url; a.download = track.fileName || (track.title+".mp3");
     document.body.appendChild(a); a.click(); a.remove();
@@ -2000,7 +2014,7 @@
       if(r && r.status===200 && r.data && r.data.ok){
         tape.plays = r.data.plays; tape.downloads = r.data.downloads;
         if(currentProfile && currentProfile.downloadIds.indexOf(tape.id)<0) currentProfile.downloadIds.push(tape.id);
-        updateCardStats(tape, "download");
+        updateCardStats(tape);
         renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
       }
     });
