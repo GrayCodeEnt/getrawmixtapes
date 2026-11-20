@@ -298,6 +298,19 @@
   .pbtn:hover{border-color:var(--orange)}
   .pbtn.play{background:var(--orange);border-color:var(--orange);width:50px;height:50px;font-size:19px}
   .pbtn[disabled]{opacity:.4;cursor:not-allowed}
+  @media (max-width:640px){
+    body{padding-bottom:64px}
+    .player{padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
+    .player-in{flex-wrap:nowrap;gap:10px}
+    .player .now{flex:1 1 auto}
+    .player .now strong{font-size:14px}
+    .player .now span{display:none}
+    .player audio{display:none!important}
+    .player-controls{gap:6px}
+    .pbtn{width:38px;height:38px;font-size:15px}
+    .pbtn.play{width:44px;height:44px;font-size:17px}
+    .player .close{min-height:36px;padding:4px 10px;font-size:13px}
+  }
   dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;border:none;border-radius:14px;padding:0;max-width:640px;width:calc(100% - 28px);max-height:calc(100dvh - 216px);overflow:hidden;z-index:65;background:var(--surface);color:var(--text);box-shadow:0 24px 60px rgba(0,0,0,.45)}
   dialog[open]{display:flex;flex-direction:column}
   .dlg-body{overflow:auto;flex:1 1 auto;min-height:0}
