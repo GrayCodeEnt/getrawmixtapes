@@ -56,7 +56,7 @@
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{animation:none!important;transition:none!important} }
-  body{margin:0;background:var(--bg);color:var(--text);font-family:"Barlow",system-ui,sans-serif;font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Barlow",system-ui,sans-serif;font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%;padding-bottom:96px}
   img{max-width:100%;display:block}
   button,[role="button"],select,summary,input:not([type="checkbox"],[type="radio"]),textarea{font:inherit}
   button,select,input,textarea{min-height:44px}
@@ -285,7 +285,7 @@
   .mt-note{color:var(--muted);font-size:14px;margin:0}
 
   /* ---------- Player / dialog ---------- */
-  .player{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--ink);color:var(--paper);border-top:3px solid var(--orange);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:none}
+  .player{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--ink);color:var(--paper);border-top:3px solid var(--orange);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:block}
   .player.on{display:block}
   .player-in{max-width:1200px;margin:0 auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
   .player .now{min-width:0;flex:1 1 200px}
@@ -293,6 +293,11 @@
   .player .now span{color:#B9B9B2;font-size:13px}
   .player audio{flex:2 1 320px;min-width:220px;height:40px}
   .player .close{background:none;border:1px solid #444;color:var(--paper);border-radius:8px;min-height:40px;padding:6px 12px;cursor:pointer}
+  .player-controls{display:flex;gap:8px;align-items:center;flex:0 0 auto}
+  .pbtn{background:#222;color:var(--paper);border:1.5px solid #555;border-radius:50%;width:44px;height:44px;font-size:17px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .pbtn:hover{border-color:var(--orange)}
+  .pbtn.play{background:var(--orange);border-color:var(--orange);width:50px;height:50px;font-size:19px}
+  .pbtn[disabled]{opacity:.4;cursor:not-allowed}
   dialog{border:none;border-radius:14px;padding:0;max-width:640px;width:calc(100% - 28px);background:var(--surface);color:var(--text);box-shadow:0 24px 60px rgba(0,0,0,.45)}
   dialog::backdrop{background:rgba(5,5,5,.66)}
   .dlg-head{display:flex;gap:16px;padding:18px;align-items:flex-start}
@@ -310,6 +315,11 @@
   .icon-btn.dl{border-color:var(--orange);background:var(--orange);color:#fff}
   .icon-btn.dl:hover{background:var(--orange-dark)}
   .icon-btn[disabled]{opacity:.45;cursor:not-allowed}
+  .artist-tape{display:flex;flex-direction:column}
+  .inline-tracks{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+  .inline-tracks .tracklist{margin-top:10px}
+  .inline-track.now-playing .tt{color:var(--orange-dark)}
+  @media (prefers-color-scheme: dark){ .inline-track.now-playing .tt{color:var(--orange)} }
   .countdown{font-variant-numeric:tabular-nums;font-weight:700;color:var(--orange-dark)}
   @media (prefers-color-scheme: dark){ .countdown{color:var(--orange)} }
 
@@ -853,11 +863,16 @@
   </div>
 </footer>
 
-<div class="player" id="player" role="region" aria-label="Now playing">
+<div class="player on" id="player" role="region" aria-label="Now playing">
   <div class="player-in">
-    <div class="now"><strong id="nowTitle">—</strong><span id="nowSub">—</span></div>
+    <div class="now"><strong id="nowTitle">Pick a song to play</strong><span id="nowSub">Free mixtapes and singles — tap ▶ on any song</span></div>
+    <div class="player-controls">
+      <button class="pbtn" id="playerPrev" type="button" aria-label="Previous song" disabled>⏮</button>
+      <button class="pbtn play" id="playerPlayPause" type="button" aria-label="Play or pause" disabled>▶</button>
+      <button class="pbtn" id="playerNext" type="button" aria-label="Next song" disabled>⏭</button>
+    </div>
     <audio id="audioEl" controls preload="none"></audio>
-    <button class="close" id="playerClose" type="button">Close</button>
+    <button class="close" id="playerClose" type="button">Stop</button>
   </div>
 </div>
 
@@ -1337,7 +1352,7 @@
       '<span class="artist artist-link" data-artist="'+esc(tape.handle||"")+'" role="link" tabindex="0" title="View '+esc(tape.artist)+' profile">'+artistAvatarHTML(tape)+esc(tape.artist)+'</span>'+
       '<span class="sub">'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'')+'</span>'+
       '<span class="tape-stats"><span>▶ '+fmt(tape.plays)+' plays</span><span>⬇ '+fmt(tape.downloads)+' downloads</span><span>'+tape.tracks.length+' track'+(tape.tracks.length===1?'':'s')+'</span></span></span>';
-    btn.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; openTape(tape.id); });
+    btn.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; if(btn._artistInline){ btn._artistInline(); return; } openTape(tape.id); });
     return btn;
   }
   function visibleTapes(){
@@ -1345,6 +1360,7 @@
     var g = $("genreFilter").value;
     return tapes.filter(function(t){
       if(!isLive(t)) return false;
+      if(isSingle(t)) return false; // singles live on the Singles page, not in the Tapes feed
       if(g && t.genre!==g) return false;
       if(!q) return true;
       return (t.title+" "+t.artist+" "+(t.dj||"")+" "+t.genre).toLowerCase().indexOf(q)>=0;
@@ -1353,7 +1369,7 @@
   function renderTapes(){
     var wrap = $("tapeGridWrap");
     var list = visibleTapes();
-    var liveCount = tapes.filter(isLive).length;
+    var liveCount = tapes.filter(function(t){ return isLive(t) && !isSingle(t); }).length;
     $("tapeCount").textContent = liveCount ? liveCount+(liveCount===1?" tape":" tapes")+" in the feed" : "";
     if(!liveCount){
       wrap.innerHTML = '<div class="empty"><h3>No tapes in the feed yet</h3><p>New tapes will show up here the moment they go live — newest at the top. This page is just the feed: every new drop lands here to stream and download free.</p></div>';
@@ -1605,7 +1621,7 @@
     if(!q){ hideGlobalResults(); return; }
     var m=artistMatches(q);
     if(!m.length){
-      box.innerHTML='<div class="gs-empty">No artist found for &ldquo;'+esc(q)+'&rdquo; — try the Tapes search for tape titles.</div>';
+      box.innerHTML='<div class="gs-empty">No artist found for &ldquo;'+esc(q)+'&rdquo; — try the Tapes or Singles search for tape titles.</div>';
       box.hidden=false; return;
     }
     box.innerHTML="";
@@ -1635,6 +1651,13 @@
       if(exact){ openArtist(exact.handle); return; }
       var sb=$("searchBox");
       if(sb) sb.value=q;
+      // Singles live on the Singles page, not in the Tapes feed — so if
+      // the Tapes search has no match, check Singles before landing.
+      if(!visibleTapes().length){
+        var ssb=$("singlesSearchBox");
+        if(ssb) ssb.value=q;
+        if(visibleSingles().length){ showPage("singles"); renderSingles(); return; }
+      }
       showPage("tapes");
       renderTapes();
     });
@@ -1642,6 +1665,42 @@
       var box=$("globalSearchResults");
       if(box && !box.hidden && ev.target.closest && !ev.target.closest(".head-search")) hideGlobalResults();
     });
+  }
+  // Artist page: tapping a tape opens its song list right on the page —
+  // no pop-up. Play All runs the tape straight through; each song also
+  // plays on its own. Tapping the same tape again closes the list.
+  function toggleArtistTape(tape, listEl){
+    if(!listEl.hidden){ listEl.hidden = true; return; }
+    document.querySelectorAll("#artistWrap .inline-tracks").forEach(function(el){ if(el!==listEl) el.hidden = true; });
+    listEl.innerHTML = "";
+    var live = isLive(tape);
+    var head = document.createElement("div");
+    head.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap";
+    var title = document.createElement("strong");
+    title.textContent = tape.title+" — "+tape.tracks.length+" song"+(tape.tracks.length===1?"":"s");
+    var playAll = document.createElement("button"); playAll.type="button"; playAll.className="btn btn-orange small"; playAll.textContent="▶ Play All"; playAll.disabled=!live;
+    playAll.addEventListener("click", function(){
+      if(!tape.tracks.length) return;
+      playQueue = { tape: tape, idx: 0 };
+      playTrack(tape, tape.tracks[0], 0);
+    });
+    var closeBtn = document.createElement("button"); closeBtn.type="button"; closeBtn.className="btn btn-outline small"; closeBtn.textContent="Close";
+    closeBtn.addEventListener("click", function(){ listEl.hidden = true; });
+    head.appendChild(title); head.appendChild(playAll); head.appendChild(closeBtn);
+    listEl.appendChild(head);
+    var ol = document.createElement("ol"); ol.className="tracklist";
+    tape.tracks.forEach(function(track, idx){
+      var li = document.createElement("li"); li.className="inline-track"; li.setAttribute("data-tape", tape.id); li.setAttribute("data-idx", String(idx));
+      li.innerHTML = '<span class="tn">'+(idx+1)+'</span><span class="tt">'+esc(track.title)+'</span>';
+      var pb = document.createElement("button"); pb.type="button"; pb.className="icon-btn inline-play"; pb.textContent="▶ Play"; pb.disabled=!live;
+      pb.addEventListener("click", function(){ playQueue = null; playTrack(tape, track, idx); });
+      var db = document.createElement("button"); db.type="button"; db.className="icon-btn dl"; db.textContent="⬇ Free"; db.disabled=!live;
+      db.addEventListener("click", function(){ downloadTrack(tape, track); });
+      li.appendChild(pb); li.appendChild(db); ol.appendChild(li);
+    });
+    listEl.appendChild(ol);
+    listEl.hidden = false;
+    updateInlineNowPlaying();
   }
   function renderArtist(){
     var wrap = $("artistWrap");
@@ -1678,7 +1737,13 @@
       bindAvatarEdit(wrap);
       if(mapped.length){
         var grid = document.createElement("div"); grid.className="tape-grid"; grid.style.marginTop="16px";
-        mapped.forEach(function(m){ grid.appendChild(tapeCard(m)); });
+        mapped.forEach(function(m){
+          var item = document.createElement("div"); item.className="artist-tape";
+          var card = tapeCard(m);
+          var list = document.createElement("div"); list.className="inline-tracks"; list.hidden = true;
+          item.appendChild(card); item.appendChild(list); grid.appendChild(item);
+          card._artistInline = function(){ toggleArtistTape(m, list); };
+        });
         wrap.appendChild(grid);
       }
     });
@@ -1686,7 +1751,7 @@
   function renderNewDrops(){
     var wrap = $("newDropsWrap");
     if(!wrap) return;
-    var list = tapes.filter(isLive).slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); }).slice(0,6);
+    var list = tapes.filter(function(t){ return isLive(t) && !isSingle(t); }).slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); }).slice(0,6);
     if(!list.length){
       wrap.innerHTML = '<div class="empty"><h3>No drops yet</h3><p>New tapes land here the moment they go live.</p><a class="btn btn-orange" href="/upload" data-nav="upload">Be the First — Upload Free</a></div>';
       return;
@@ -1738,8 +1803,60 @@
 
   /* ---------- Tape dialog + player (audio now streams from the backend) ---------- */
   var audio = $("audioEl");
+  // Play All queue: when a tape is played straight through, the next
+  // song starts when the current one ends. Picking one song by itself
+  // clears the queue. nowPlaying drives the highlight in inline lists.
+  var playQueue = null;
+  var nowPlaying = null;
+  var currentTape = null;
+  var playerIsPlaying = false;
+  // The bottom player bar is always on screen — these buttons stay
+  // usable while you browse other pages, and playback keeps going
+  // because the site never reloads when you switch tabs.
+  function updatePlayerControls(){
+    var loaded = !!(currentTape && nowPlaying);
+    $("playerPlayPause").disabled = !loaded;
+    $("playerPrev").disabled = !loaded || nowPlaying.idx<=0;
+    $("playerNext").disabled = !loaded || nowPlaying.idx>=currentTape.tracks.length-1;
+    $("playerPlayPause").textContent = (playerIsPlaying && loaded) ? "❚❚" : "▶";
+  }
+  audio.addEventListener("play", function(){ playerIsPlaying = true; updatePlayerControls(); });
+  audio.addEventListener("pause", function(){ playerIsPlaying = false; updatePlayerControls(); });
+  function playStep(dir){
+    if(!currentTape || !nowPlaying) return;
+    var next = nowPlaying.idx + dir;
+    if(next < 0 || next >= currentTape.tracks.length) return;
+    if(playQueue) playQueue.idx = next;
+    playTrack(currentTape, currentTape.tracks[next], next);
+  }
+  $("playerPrev").addEventListener("click", function(){ playStep(-1); });
+  $("playerNext").addEventListener("click", function(){ playStep(1); });
+  $("playerPlayPause").addEventListener("click", function(){
+    if(!audio.src) return;
+    if(audio.paused) audio.play().catch(function(){ toast("Tap play on the player to start the track."); });
+    else audio.pause();
+  });
+  function updateInlineNowPlaying(){
+    document.querySelectorAll(".inline-track").forEach(function(li){
+      var on = nowPlaying && li.getAttribute("data-tape")===nowPlaying.tapeId && li.getAttribute("data-idx")===String(nowPlaying.idx);
+      li.classList.toggle("now-playing", !!on);
+      var pb = li.querySelector(".inline-play");
+      if(pb) pb.textContent = on ? "▶ Playing" : "▶ Play";
+    });
+  }
+  audio.addEventListener("ended", function(){
+    if(!playQueue){ playerIsPlaying = false; updatePlayerControls(); return; }
+    var next = playQueue.idx + 1;
+    if(next >= playQueue.tape.tracks.length){ playQueue = null; playerIsPlaying = false; updatePlayerControls(); return; }
+    playQueue.idx = next;
+    playTrack(playQueue.tape, playQueue.tape.tracks[next], next);
+  });
   function playTrack(tape, track, idx){
     audio.src = track.url;
+    currentTape = tape;
+    nowPlaying = { tapeId: tape.id, idx: idx };
+    updateInlineNowPlaying();
+    updatePlayerControls();
     $("nowTitle").textContent = track.title;
     $("nowSub").textContent = tape.title+" — "+tape.artist;
     $("player").classList.add("on");
@@ -1756,7 +1873,7 @@
         });
         tape.plays++; renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
       }
-    }).catch(function(){ toast("Tap play on the player to start the track."); });
+    }).catch(function(){ playerIsPlaying = false; updatePlayerControls(); toast("Tap play on the player to start the track."); });
   }
   function downloadTrack(tape, track){
     // Count the download on the server first, then open the file — the
@@ -1798,7 +1915,7 @@
       var li = document.createElement("li");
       li.innerHTML = '<span class="tn">'+(idx+1)+'</span><span class="tt">'+esc(track.title)+'</span>';
       var pb = document.createElement("button"); pb.type="button"; pb.className="icon-btn"; pb.textContent="▶ Play"; pb.disabled=!live;
-      pb.addEventListener("click", function(){ playTrack(tape, track, idx); });
+      pb.addEventListener("click", function(){ playQueue = null; playTrack(tape, track, idx); });
       var db = document.createElement("button"); db.type="button"; db.className="icon-btn dl"; db.textContent="⬇ Free"; db.disabled=!live;
       db.addEventListener("click", function(){ downloadTrack(tape, track); });
       li.appendChild(pb); li.appendChild(db); ol.appendChild(li);
@@ -1822,7 +1939,7 @@
   $("editClose").addEventListener("click", function(){ closeDlg("editDialog"); });
   $("eCancel").addEventListener("click", function(){ closeDlg("editDialog"); });
   $("eSave").addEventListener("click", function(){ saveEditTape(); });
-  $("playerClose").addEventListener("click", function(){ audio.pause(); $("player").classList.remove("on"); });
+  $("playerClose").addEventListener("click", function(){ audio.pause(); playQueue = null; nowPlaying = null; currentTape = null; playerIsPlaying = false; $("nowTitle").textContent = "Pick a song to play"; $("nowSub").textContent = "Free mixtapes and singles — tap ▶ on any song"; updateInlineNowPlaying(); updatePlayerControls(); });
 
   /* ---------- Upload (files go to the server; the upload creates the artist profile) ---------- */
   var trackFiles = [];
