@@ -1951,6 +1951,27 @@
       renderAll();
     });
   }
+  function addTracks(id, files){
+    var t = findTape(id); if(!t || t.handle!==currentUser) return;
+    if(!files || !files.length){ toast("Choose at least one audio track first."); return; }
+    var picked = Array.prototype.slice.call(files);
+    if(t.tracks.length + picked.length > 20){ toast("20 tracks max per tape — “"+t.title+"” already has "+t.tracks.length+", so you can add "+(20-t.tracks.length)+" more."); return; }
+    var fd = new FormData();
+    picked.forEach(function(f){
+      fd.append("tracks", f, f.name);
+      var base = f.name.replace(/\.[^.]+$/,"").replace(/^\d+[\s._-]+/,"").replace(/[_-]+/g," ").trim() || f.name;
+      fd.append("trackTitles", base);
+    });
+    toast("Adding "+picked.length+" track"+(picked.length===1?"":"s")+" to “"+t.title+"”…");
+    api("/api/tapes/"+id+"/tracks", { method:"POST", json:false, body: fd }).then(function(r){
+      if(!r){ toast("Couldn't reach the server — try again in a bit."); return; }
+      if(r.status!==201 || !r.data.ok){ toast((r.data && r.data.error) || "Couldn't add those tracks."); return; }
+      updateTapeFromServer(id, r);
+      var n = (r.data.tape && r.data.tape.tracks) ? r.data.tape.tracks.length : (t.tracks.length + picked.length);
+      toast("Added "+(r.data.added||picked.length)+" track"+((r.data.added||picked.length)===1?"":"s")+" — “"+t.title+"” now has "+n+" tracks.");
+      renderAll();
+    });
+  }
   function deleteTape(id){
     var t = findTape(id); if(!t || t.handle!==currentUser) return;
     if(!window.confirm("Delete “"+t.title+"” forever? This removes the tape, its audio and cover from the site.")) return;
@@ -1994,6 +2015,8 @@
     if(!currentUser || !p){ wrap.hidden=true; wrap.innerHTML=""; return; }
     function mtItem(t){
       var pillCls, status, actions = '<button class="btn btn-dark small" type="button" data-preview="'+t.id+'">Preview</button>';
+      actions += '<button class="btn btn-outline small" type="button" data-addtracks="'+t.id+'">Add tracks</button>';
+      actions += '<input type="file" accept="audio/*,.mp3,.m4a,.wav,.flac,.ogg,.aac" multiple hidden data-addtracks-input="'+t.id+'" aria-label="Choose audio tracks to add to '+esc(t.title)+'" />';
       if(t.draft){ pillCls="draft"; status="Draft · Private"; }
       else if(isScheduled(t)){ pillCls="sched"; status='Scheduled · Premieres in <span data-cd="'+t.id+'">'+countdownText(t.releaseAt-Date.now())+'</span>'; }
       else { pillCls="live"; status="Live in the Feed"; }
@@ -2072,6 +2095,18 @@
     });
     wrap.querySelectorAll("[data-todraft]").forEach(function(b){
       b.addEventListener("click", function(){ backToDraft(b.getAttribute("data-todraft")); });
+    });
+    wrap.querySelectorAll("[data-addtracks]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var inp = wrap.querySelector('[data-addtracks-input="'+b.getAttribute("data-addtracks")+'"]');
+        if(inp) inp.click();
+      });
+    });
+    wrap.querySelectorAll("[data-addtracks-input]").forEach(function(inp){
+      inp.addEventListener("change", function(){
+        addTracks(inp.getAttribute("data-addtracks-input"), inp.files);
+        inp.value = "";
+      });
     });
     wrap.querySelectorAll("[data-delete-tape]").forEach(function(b){
       b.addEventListener("click", function(){ deleteTape(b.getAttribute("data-delete-tape")); });
