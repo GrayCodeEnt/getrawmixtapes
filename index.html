@@ -288,6 +288,7 @@
   .player{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--ink);color:var(--paper);border-top:3px solid var(--orange);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:block}
   .player.on{display:block}
   .player-in{max-width:1200px;margin:0 auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .player .now-cover{width:44px;height:44px;object-fit:cover;border-radius:6px;flex:0 0 auto;background:#222}
   .player .now{min-width:0;flex:1 1 200px}
   .player .now strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px}
   .player .now span{color:#B9B9B2;font-size:13px}
@@ -302,6 +303,7 @@
     body{padding-bottom:64px}
     .player{padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
     .player-in{flex-wrap:nowrap;gap:10px}
+    .player .now-cover{width:40px;height:40px}
     .player .now{flex:1 1 auto}
     .player .now strong{font-size:14px}
     .player .now span{display:none}
@@ -899,6 +901,7 @@
 
 <div class="player on" id="player" role="region" aria-label="Now playing">
   <div class="player-in">
+    <img id="nowCover" class="now-cover" src="" alt="" style="display:none" />
     <div class="now"><strong id="nowTitle">Pick a song to play</strong><span id="nowSub">Free mixtapes and singles — tap ▶ on any song</span></div>
     <div class="player-controls">
       <button class="pbtn" id="playerPrev" type="button" aria-label="Previous song" disabled>⏮</button>
@@ -1948,6 +1951,9 @@
     updatePlayerControls();
     $("nowTitle").textContent = track.title;
     $("nowSub").textContent = tape.title+" — "+tape.artist;
+    var nc = $("nowCover");
+    if(tape.cover){ nc.src = tape.cover; nc.alt = "Cover art for "+tape.title+" by "+tape.artist; nc.style.display = ""; }
+    else { nc.removeAttribute("src"); nc.alt = ""; nc.style.display = "none"; }
     $("player").classList.add("on");
     var key = tape.id+":"+idx;
     audio.play().then(function(){
@@ -2097,7 +2103,7 @@
   $("editClose").addEventListener("click", function(){ closeDlg("editDialog"); });
   $("eCancel").addEventListener("click", function(){ closeDlg("editDialog"); });
   $("eSave").addEventListener("click", function(){ saveEditTape(); });
-  $("playerClose").addEventListener("click", function(){ audio.pause(); audio.removeAttribute("src"); audio.load(); $("audioEl").style.display = "none"; playQueue = null; nowPlaying = null; currentTape = null; playerIsPlaying = false; $("nowTitle").textContent = "Pick a song to play"; $("nowSub").textContent = "Free mixtapes and singles — tap ▶ on any song"; updateInlineNowPlaying(); updatePlayerControls(); });
+  $("playerClose").addEventListener("click", function(){ audio.pause(); audio.removeAttribute("src"); audio.load(); $("audioEl").style.display = "none"; playQueue = null; nowPlaying = null; currentTape = null; playerIsPlaying = false; $("nowTitle").textContent = "Pick a song to play"; $("nowSub").textContent = "Free mixtapes and singles — tap ▶ on any song"; var nc = $("nowCover"); nc.removeAttribute("src"); nc.alt = ""; nc.style.display = "none"; updateInlineNowPlaying(); updatePlayerControls(); });
 
   /* ---------- Upload (files go to the server; the upload creates the artist profile) ---------- */
   var trackFiles = [];
