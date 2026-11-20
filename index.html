@@ -227,6 +227,10 @@
   .track-row input{flex:1;min-width:0}
   .track-row .fname{font-size:12.5px;color:var(--muted);flex:0 0 auto;max-width:38%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .track-row .trk-rm{flex:0 0 auto;padding:2px 10px;line-height:1.4}
+  .track-row .track-grip{cursor:grab;touch-action:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 2px;flex:0 0 auto;user-select:none;-webkit-user-select:none}
+  .track-row .track-grip:active{cursor:grabbing}
+  .track-row{transition:transform .12s ease}
+  .track-row.dragging{transition:none;opacity:.85;box-shadow:0 4px 14px rgba(0,0,0,.28);z-index:2;position:relative}
   .cover-preview{display:none;gap:14px;align-items:center;margin-top:4px}
   .cover-preview img{width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
   .form-msg{border-radius:8px;padding:12px 16px;font-weight:600;display:none;margin-top:16px}
@@ -2132,6 +2136,9 @@
       var row = document.createElement("div"); row.className="track-row";
       var base = f.name.replace(/\.[^.]+$/,"").replace(/^\d+[\s._-]+/,"").replace(/[_-]+/g," ").trim() || ("Track "+(i+1));
       row.innerHTML = '<span class="n">'+(i+1)+'.</span>';
+      var grip = document.createElement("span"); grip.className="track-grip"; grip.textContent="☰"; grip.title="Drag to move this song up or down"; grip.setAttribute("aria-label","Drag to reorder "+f.name);
+      grip.addEventListener("pointerdown", function(ev){ startTrackDrag(ev, row, i); });
+      row.insertBefore(grip, row.firstChild);
       var inp = document.createElement("input"); inp.type="text"; inp.value = f._title || base; inp.setAttribute("aria-label","Title for track "+(i+1));
       inp.addEventListener("input", function(){ f._title = inp.value; });
       var fn = document.createElement("span"); fn.className="fname"; fn.textContent=f.name;
@@ -2140,6 +2147,59 @@
       row.appendChild(inp); row.appendChild(fn); row.appendChild(rm); rows.appendChild(row);
     });
     wrap.hidden = trackFiles.length===0;
+  }
+  // Drag to reorder tracks: grab the ☰ handle on a row and move it up
+  // or down. Works with mouse and touch (pointer events). The dragged
+  // row follows your finger, the rows it passes shift aside to show
+  // where it will land, and on drop trackFiles is reordered to match —
+  // so the audio and the titles move together.
+  var trackDrag = null;
+  function trackRowIndex(rowEl){ return Array.prototype.indexOf.call($("trackRows").children, rowEl); }
+  function startTrackDrag(ev, rowEl, idx){
+    if(trackFiles.length < 2) return;
+    ev.preventDefault();
+    var h = rowEl.offsetHeight || 48;
+    trackDrag = { from: idx, to: idx, height: h, startY: ev.clientY, row: rowEl, grip: ev.currentTarget || ev.target };
+    rowEl.classList.add("dragging");
+    rowEl.style.pointerEvents = "none";
+    var g = trackDrag.grip;
+    if(g && g.setPointerCapture){ try{ g.setPointerCapture(ev.pointerId); }catch(e){} }
+    if(g){ g.addEventListener("pointermove", moveTrackDrag); g.addEventListener("pointerup", endTrackDrag); g.addEventListener("pointercancel", endTrackDrag); }
+  }
+  function moveTrackDrag(ev){
+    if(!trackDrag) return;
+    ev.preventDefault();
+    var dy = ev.clientY - trackDrag.startY;
+    trackDrag.row.style.transform = "translateY("+dy+"px)";
+    var under = (document.elementFromPoint ? document.elementFromPoint(ev.clientX, ev.clientY) : null);
+    var targetRow = under && under.closest ? under.closest(".track-row") : null;
+    if(targetRow && targetRow !== trackDrag.row){
+      var to = trackRowIndex(targetRow);
+      if(to >= 0 && to !== trackDrag.to){
+        trackDrag.to = to;
+        Array.prototype.forEach.call($("trackRows").children, function(r, i){
+          if(r === trackDrag.row) return;
+          var shift = 0;
+          if(trackDrag.from < trackDrag.to && i > trackDrag.from && i <= trackDrag.to) shift = -trackDrag.height;
+          if(trackDrag.from > trackDrag.to && i >= trackDrag.to && i < trackDrag.from) shift = trackDrag.height;
+          r.style.transform = shift ? "translateY("+shift+"px)" : "";
+        });
+      }
+    }
+  }
+  function endTrackDrag(ev){
+    if(!trackDrag) return;
+    var s = trackDrag; trackDrag = null;
+    var g = s.grip;
+    if(g){ g.removeEventListener("pointermove", moveTrackDrag); g.removeEventListener("pointerup", endTrackDrag); g.removeEventListener("pointercancel", endTrackDrag); }
+    s.row.classList.remove("dragging");
+    s.row.style.transform = ""; s.row.style.pointerEvents = "";
+    Array.prototype.forEach.call($("trackRows").children, function(r){ r.style.transform = ""; });
+    if(s.to !== s.from){
+      var f = trackFiles.splice(s.from, 1)[0];
+      trackFiles.splice(s.to, 0, f);
+      renderTrackRows();
+    }
   }
   $("fCover").addEventListener("change", function(){
     var f = this.files[0];
