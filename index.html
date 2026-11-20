@@ -969,6 +969,7 @@
   var CACHE_KEY = "getraw_cache_v1";
 
   var tapes = [];            // server tapes, mapped to the old shape (see mapTape)
+  var feedLoaded = false;    // true once the first /api/tapes fetch settles — until then show "Loading…", never "No tapes yet"
   var currentUser = null;    // handle string
   var currentProfile = null; // { user, uploadIds:[tapeId], downloadIds:[tapeId] } from /api/auth/me
   var rankMode = "global";
@@ -1404,7 +1405,11 @@
     var liveCount = tapes.filter(function(t){ return isLive(t) && !isSingle(t); }).length;
     $("tapeCount").textContent = liveCount ? liveCount+(liveCount===1?" tape":" tapes")+" in the feed" : "";
     if(!liveCount){
-      wrap.innerHTML = '<div class="empty"><h3>No tapes in the feed yet</h3><p>New tapes will show up here the moment they go live — newest at the top. This page is just the feed: every new drop lands here to stream and download free.</p></div>';
+      if(!feedLoaded){
+        wrap.innerHTML = '<div class="empty"><h3>Loading tapes…</h3><p>Pulling the latest drops…</p></div>';
+      } else {
+        wrap.innerHTML = '<div class="empty"><h3>No tapes in the feed yet</h3><p>New tapes will show up here the moment they go live — newest at the top. This page is just the feed: every new drop lands here to stream and download free.</p></div>';
+      }
       return;
     }
     if(!list.length){
@@ -1485,6 +1490,8 @@
       var t2 = live[0];
       aw.innerHTML = '<div class="aotw"><div>'+coverHTML(t2)+'</div><div class="aotw-body"><span class="k">Artist of the Week</span><h3><span class="artist-link" data-artist="'+esc(t2.handle)+'">'+artistAvatarHTML(t2)+esc(t2.artist)+'</span></h3><p>First tape on the board: <strong style="color:var(--orange)">'+esc(t2.title)+'</strong>. Plays and downloads this week decide who holds the crown — run it up.</p><button class="btn btn-orange" type="button" id="aotwOpen">Play the Tape</button></div></div>';
       $("aotwOpen").addEventListener("click", function(){ openTape(t2.id); });
+    } else if(!feedLoaded){
+      aw.innerHTML = '<div class="empty"><h3>Loading Artist of the Week…</h3><p>Pulling the latest drops…</p></div>';
     }
   }
   function renderSoon(){
@@ -1821,7 +1828,11 @@
     if(!wrap) return;
     var list = tapes.filter(function(t){ return isLive(t) && !isSingle(t); }).slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); }).slice(0,6);
     if(!list.length){
-      wrap.innerHTML = '<div class="empty"><h3>No drops yet</h3><p>New tapes land here the moment they go live.</p><a class="btn btn-orange" href="/upload" data-nav="upload">Be the First — Upload Free</a></div>';
+      if(!feedLoaded){
+        wrap.innerHTML = '<div class="empty"><h3>Loading drops…</h3><p>Pulling the latest drops…</p></div>';
+      } else {
+        wrap.innerHTML = '<div class="empty"><h3>No drops yet</h3><p>New tapes land here the moment they go live.</p><a class="btn btn-orange" href="/upload" data-nav="upload">Be the First — Upload Free</a></div>';
+      }
       return;
     }
     var grid = document.createElement("div"); grid.className="tape-grid";
@@ -1844,7 +1855,11 @@
     var count = tapes.filter(isSingle).length;
     $("singlesCount").textContent = count ? count+(count===1?" single":" singles")+" here" : "";
     if(!count){
-      wrap.innerHTML = '<div class="empty"><h3>No singles yet</h3><p>One-song releases will show up here the moment they go live — newest at the top.</p></div>';
+      if(!feedLoaded){
+        wrap.innerHTML = '<div class="empty"><h3>Loading singles…</h3><p>Pulling the latest drops…</p></div>';
+      } else {
+        wrap.innerHTML = '<div class="empty"><h3>No singles yet</h3><p>One-song releases will show up here the moment they go live — newest at the top.</p></div>';
+      }
       return;
     }
     if(!list.length){
@@ -1860,7 +1875,11 @@
     if(!wrap) return;
     var list = tapes.filter(isSingle).slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); }).slice(0,3);
     if(!list.length){
-      wrap.innerHTML = '<div class="empty"><h3>No singles yet</h3><p>Drop one song and it\'ll land here.</p><a class="btn btn-orange" href="/upload" data-nav="upload">Upload a Single</a></div>';
+      if(!feedLoaded){
+        wrap.innerHTML = '<div class="empty"><h3>Loading singles…</h3><p>Pulling the latest drops…</p></div>';
+      } else {
+        wrap.innerHTML = '<div class="empty"><h3>No singles yet</h3><p>Drop one song and it\'ll land here.</p><a class="btn btn-orange" href="/upload" data-nav="upload">Upload a Single</a></div>';
+      }
       return;
     }
     var grid = document.createElement("div"); grid.className="tape-grid";
@@ -2272,6 +2291,7 @@
   }
   function refreshFeed(){
     return api("/api/tapes").then(function(r){
+      feedLoaded = true;
       if(!r || r.status !== 200 || !r.data || !r.data.ok) return false;
       setApiDown(false);
       var live = mergeTapes(r.data.tapes);
