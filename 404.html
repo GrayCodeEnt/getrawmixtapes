@@ -315,9 +315,14 @@
   .icon-btn.dl{border-color:var(--orange);background:var(--orange);color:#fff}
   .icon-btn.dl:hover{background:var(--orange-dark)}
   .icon-btn[disabled]{opacity:.45;cursor:not-allowed}
-  .artist-tape{display:flex;flex-direction:column}
-  .inline-tracks{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
-  .inline-tracks .tracklist{margin-top:10px}
+  .tape-panel{position:fixed;top:0;right:0;bottom:0;width:min(430px,94vw);background:var(--surface);color:var(--text);border-left:1px solid var(--line);box-shadow:-10px 0 34px rgba(0,0,0,.28);z-index:80;transform:translateX(105%);visibility:hidden;transition:transform .28s ease,visibility 0s linear .28s}
+  .tape-panel.open{transform:translateX(0);visibility:visible;transition:transform .28s ease}
+  .tape-panel-in{height:100%;overflow-y:auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom))}
+  .tape-panel-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+  .tape-panel-head strong{display:block;font-size:19px;line-height:1.25}
+  .tape-panel-head span{color:var(--muted);font-size:14px}
+  .tape-panel .tracklist{margin-top:12px}
+  .panel-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:75}
   .inline-track.now-playing .tt{color:var(--orange-dark)}
   @media (prefers-color-scheme: dark){ .inline-track.now-playing .tt{color:var(--orange)} }
   .countdown{font-variant-numeric:tabular-nums;font-weight:700;color:var(--orange-dark)}
@@ -876,6 +881,17 @@
   </div>
 </div>
 
+<div class="panel-backdrop" id="tapePanelBackdrop" hidden></div>
+<aside class="tape-panel" id="tapePanel" aria-label="Tape songs">
+  <div class="tape-panel-in">
+    <div class="tape-panel-head">
+      <div><strong id="tapePanelTitle"></strong><span id="tapePanelSub"></span></div>
+      <button class="close" id="tapePanelClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div id="tapePanelBody"></div>
+  </div>
+</aside>
+
 <dialog id="tapeDialog" aria-labelledby="dlgTitle">
   <div class="dlg-head">
     <span id="dlgCover"></span>
@@ -1270,6 +1286,7 @@
   function showPage(name, updateUrl){
     name = normalizePage(name);
     currentPage = name;
+    closeTapePanel();
     document.querySelectorAll(".page").forEach(function(p){ p.classList.toggle("active", p.getAttribute("data-page")===name); });
     document.querySelectorAll("[data-nav]").forEach(function(a){
       if(a.classList && a.parentElement && a.parentElement.classList.contains("main-nav")) a.classList.toggle("active", a.getAttribute("data-nav")===name);
@@ -1666,28 +1683,28 @@
       if(box && !box.hidden && ev.target.closest && !ev.target.closest(".head-search")) hideGlobalResults();
     });
   }
-  // Artist page: tapping a tape opens its song list right on the page —
-  // no pop-up. Play All runs the tape straight through; each song also
-  // plays on its own. Tapping the same tape again closes the list.
-  function toggleArtistTape(tape, listEl){
-    if(!listEl.hidden){ listEl.hidden = true; return; }
-    document.querySelectorAll("#artistWrap .inline-tracks").forEach(function(el){ if(el!==listEl) el.hidden = true; });
-    listEl.innerHTML = "";
+  // Artist page: tapping a tape slides its songs in from the side — a
+  // side panel, not a drop-down under the card and not a pop-up. Play
+  // All runs the tape straight through; each song also plays on its own.
+  function openTapePanel(tape){
     var live = isLive(tape);
+    $("tapePanelTitle").textContent = tape.title;
+    $("tapePanelSub").textContent = tape.artist+" · "+tape.tracks.length+" song"+(tape.tracks.length===1?"":"s")+" · "+fmt(tape.plays)+" plays · "+fmt(tape.downloads)+" downloads";
+    var body = $("tapePanelBody");
+    body.innerHTML = "";
     var head = document.createElement("div");
     head.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap";
-    var title = document.createElement("strong");
-    title.textContent = tape.title+" — "+tape.tracks.length+" song"+(tape.tracks.length===1?"":"s");
     var playAll = document.createElement("button"); playAll.type="button"; playAll.className="btn btn-orange small"; playAll.textContent="▶ Play All"; playAll.disabled=!live;
     playAll.addEventListener("click", function(){
       if(!tape.tracks.length) return;
       playQueue = { tape: tape, idx: 0 };
       playTrack(tape, tape.tracks[0], 0);
     });
-    var closeBtn = document.createElement("button"); closeBtn.type="button"; closeBtn.className="btn btn-outline small"; closeBtn.textContent="Close";
-    closeBtn.addEventListener("click", function(){ listEl.hidden = true; });
-    head.appendChild(title); head.appendChild(playAll); head.appendChild(closeBtn);
-    listEl.appendChild(head);
+    head.appendChild(playAll);
+    var dlAll = document.createElement("button"); dlAll.type="button"; dlAll.className="btn btn-outline small"; dlAll.textContent="⬇ Download All"; dlAll.disabled=!live;
+    dlAll.addEventListener("click", function(){ downloadAll(tape); });
+    head.appendChild(dlAll);
+    body.appendChild(head);
     var ol = document.createElement("ol"); ol.className="tracklist";
     tape.tracks.forEach(function(track, idx){
       var li = document.createElement("li"); li.className="inline-track"; li.setAttribute("data-tape", tape.id); li.setAttribute("data-idx", String(idx));
@@ -1698,10 +1715,19 @@
       db.addEventListener("click", function(){ downloadTrack(tape, track); });
       li.appendChild(pb); li.appendChild(db); ol.appendChild(li);
     });
-    listEl.appendChild(ol);
-    listEl.hidden = false;
+    body.appendChild(ol);
+    if(tape.desc){ var d = document.createElement("p"); d.style.cssText = "color:var(--muted);font-size:14.5px;margin:14px 0 0"; d.textContent = tape.desc; body.appendChild(d); }
+    $("tapePanel").classList.add("open");
+    $("tapePanelBackdrop").hidden = false;
     updateInlineNowPlaying();
   }
+  function closeTapePanel(){
+    $("tapePanel").classList.remove("open");
+    $("tapePanelBackdrop").hidden = true;
+  }
+  $("tapePanelClose").addEventListener("click", closeTapePanel);
+  $("tapePanelBackdrop").addEventListener("click", closeTapePanel);
+  document.addEventListener("keydown", function(ev){ if(ev.key==="Escape") closeTapePanel(); });
   function renderArtist(){
     var wrap = $("artistWrap");
     if(!wrap) return;
@@ -1738,11 +1764,9 @@
       if(mapped.length){
         var grid = document.createElement("div"); grid.className="tape-grid"; grid.style.marginTop="16px";
         mapped.forEach(function(m){
-          var item = document.createElement("div"); item.className="artist-tape";
           var card = tapeCard(m);
-          var list = document.createElement("div"); list.className="inline-tracks"; list.hidden = true;
-          item.appendChild(card); item.appendChild(list); grid.appendChild(item);
-          card._artistInline = function(){ toggleArtistTape(m, list); };
+          grid.appendChild(card);
+          card._artistInline = function(){ openTapePanel(m); };
         });
         wrap.appendChild(grid);
       }
@@ -1894,6 +1918,27 @@
     refreshMe().then(function(){ renderAll(); if(currentTapeId===tape.id) fillDialog(tape); });
     renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
   }
+  function downloadAll(tape){
+    // The whole tape as one file: count the download on the server
+    // first (same as a single song — one whole-tape download counts
+    // once), then open the ZIP the backend builds from every song.
+    if(!isLive(tape)) return;
+    api("/api/tapes/"+tape.id+"/download", { method:"POST", body: JSON.stringify({}) }).then(function(r){
+      if(r && r.status===200 && r.data && r.data.ok){
+        tape.plays = r.data.plays; tape.downloads = r.data.downloads;
+        if(currentProfile && currentProfile.downloadIds.indexOf(tape.id)<0) currentProfile.downloadIds.push(tape.id);
+        renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
+      }
+    });
+    recordDownloadLocal(tape);
+    var a = document.createElement("a");
+    a.href = API_BASE + "/api/tapes/" + encodeURIComponent(tape.id) + "/download-all";
+    a.download = (tape.title || "mixtape") + ".zip";
+    document.body.appendChild(a); a.click(); a.remove();
+    toast("Downloading the whole tape — "+tape.tracks.length+" songs in one file.");
+    refreshMe().then(function(){ renderAll(); if(currentTapeId===tape.id) fillDialog(tape); });
+    renderAll(); if(currentTapeId===tape.id) fillDialog(tape);
+  }
   var dialogPreview = false;
   function fillDialog(tape){
     var live = isLive(tape) || dialogPreview;
@@ -1909,7 +1954,12 @@
       var db = donateBtnHTML(tape, true);
       if(db) lockHTML += '<p style="margin:10px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+db+'<span style="color:var(--muted);font-size:13.5px">Donations go straight to the artist via Cash App.</span></p>';
     }
+    if(isLive(tape)){
+      lockHTML += '<p style="margin:10px 0 0"><button class="btn btn-orange small" id="dlgDownloadAll" type="button">⬇ Download All</button> <span style="color:var(--muted);font-size:13.5px">The whole tape as one file.</span></p>';
+    }
     $("dlgLock").innerHTML = lockHTML;
+    var da = $("dlgDownloadAll");
+    if(da) da.addEventListener("click", function(){ downloadAll(tape); });
     var ol = $("dlgTracks"); ol.innerHTML="";
     tape.tracks.forEach(function(track, idx){
       var li = document.createElement("li");
