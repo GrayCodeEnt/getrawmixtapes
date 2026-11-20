@@ -251,6 +251,9 @@
   .profile-head .avatar{width:64px;height:64px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Anton",sans-serif;font-size:28px;flex:0 0 auto}
   .profile-head h3{margin:0;font-size:24px}
   .profile-head .handle{color:var(--orange-dark);font-weight:700}
+  .profile-head .avatar-img{width:64px;height:64px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+  .profile-bio{margin:12px 0 0;color:var(--muted);font-size:14.5px;white-space:pre-wrap}
+  .user-chip .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}
   @media (prefers-color-scheme: dark){ .profile-head .handle{color:var(--orange)} }
   .mini-list{list-style:none;margin:0;padding:0}
   .mini-list li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line);flex-wrap:wrap}
@@ -683,9 +686,10 @@
           <div class="track-rows" id="trackRows"></div>
         </div>
       </div>
-      <p style="margin:18px 0 0;color:var(--muted);font-size:14.5px">This saves the tape as a <strong>private draft</strong> in your My Tapes — only you can see it. From My Tapes you choose when each tape goes public: <strong>Publish Now</strong> to put it in the Tapes feed right away, or <strong>Schedule a Premiere</strong> to set a date and time with a countdown.</p>
+      <p style="margin:18px 0 0;color:var(--muted);font-size:14.5px">Two separate choices — nothing goes public unless you pick it. <strong>Save as Draft</strong> keeps the tape private in your My Tapes, only you can see it. <strong>Publish Now</strong> puts it straight into the Tapes feed. From My Tapes you can still publish a draft later, or <strong>Schedule a Premiere</strong> with a countdown.</p>
       <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-        <button type="submit" class="btn btn-orange">Save Draft to My Tapes — Free</button>
+        <button type="submit" class="btn btn-orange" id="saveDraftBtn">Save as Draft — Free</button>
+        <button type="submit" class="btn btn-dark" id="publishNowBtn">Publish Now — Free</button>
         <button type="reset" class="btn btn-outline">Clear form</button>
       </div>
       <div class="form-msg" id="uploadMsg" role="status"></div>
@@ -1502,7 +1506,9 @@
       var p = r.data.profile, list = r.data.tapes || [], totals = r.data.totals || {};
       document.title = p.name + " — Get Raw Mixtapes";
       var tag = normCashtag(p.cashtag);
-      var html = '<div class="profile-head"><span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span><div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · Artist profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
+      var headAvatar = p.avatar ? '<img class="avatar-img" src="'+esc(p.avatar)+'" alt="'+esc(p.name)+' profile photo" />' : '<span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span>';
+      var html = '<div class="profile-head">'+headAvatar+'<div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · Artist profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
+      if(p.bio) html += '<p class="profile-bio">'+esc(p.bio)+'</p>';
       html += '<p class="artist-page-stats"><span><b>'+exactNum(totals.publishedTapes||0)+'</b> tapes</span><span><b>'+exactNum(totals.plays||0)+'</b> plays</span><span><b>'+exactNum(totals.downloads||0)+'</b> downloads</span></p>';
       if(tag) html += '<p style="margin:12px 0 0"><a class="btn small" href="'+cashUrl(tag)+'" target="_blank" rel="noopener" style="background:#00D632;border-color:#00D632;color:#06281A">Donate — Cash App '+esc(tag)+'</a> <span style="color:var(--muted);font-size:13.5px">Donations go straight to the artist via Cash App.</span></p>';
       var mapped = list.map(function(rt){ return mapTape(rt); }).filter(Boolean);
@@ -1710,6 +1716,9 @@
     }
     renderTrackRows();
   });
+  var uploadPublish = false; // true only when the Publish Now button was tapped
+  $("saveDraftBtn").addEventListener("click", function(){ uploadPublish = false; });
+  $("publishNowBtn").addEventListener("click", function(){ uploadPublish = true; });
   $("uploadForm").addEventListener("submit", function(ev){
     ev.preventDefault();
     var msg = $("uploadMsg"); msg.className="form-msg";
@@ -1762,8 +1771,34 @@
       tapes.push(tape);
       ensureTapeStats(tape);
       saveCache();
+      if(uploadPublish){
+        // Publish is a separate, explicit step: the upload always lands
+        // as a private draft first, then this publishes it. If the
+        // publish call fails, the tape stays a private draft — never
+        // half-live.
+        api("/api/tapes/"+tape.id+"/publish", { method:"POST", body: "{}" }).then(function(pr){
+          if(pr && pr.status === 200 && pr.data && pr.data.ok){
+            tape = mapTape(pr.data.tape);
+            var ti = tapes.findIndex(function(x){ return x.id === tape.id; });
+            if(ti >= 0) tapes[ti] = tape;
+            ensureTapeStats(tape); saveCache();
+            msg.classList.add("ok");
+            msg.textContent = "“"+title+"” is live in the Tapes feed now.";
+            toast("Published — “"+title+"” is live in the Tapes feed.");
+          } else {
+            msg.classList.add("ok");
+            msg.textContent = "“"+title+"” is saved as a private draft in your My Tapes — the publish didn't go through, so it's still private. Publish it from My Tapes when you're ready.";
+            toast("Saved as a draft — the publish didn't go through, so it's still private.");
+          }
+          uploadPublish = false;
+          ev.target.reset(); trackFiles=[]; renderTrackRows(); $("coverPreview").style.display="none";
+          refreshMe().then(function(){ renderAll(); showPage("sign-in"); });
+        });
+        return;
+      }
       msg.classList.add("ok");
       msg.textContent = res.data.message || "“"+title+"” is saved as a private draft in your My Tapes, "+handle+".";
+      uploadPublish = false;
       ev.target.reset(); trackFiles=[]; renderTrackRows(); $("coverPreview").style.display="none";
       refreshMe().then(function(){ renderAll(); showPage("sign-in"); });
       toast("Draft saved — find “"+title+"” in your My Tapes.");
@@ -1778,6 +1813,7 @@
     trackFiles = [];
     renderTrackRows();
     $("coverPreview").style.display="none";
+    uploadPublish = false;
     setUploadKind("mixtape");
   });
 
@@ -1949,7 +1985,8 @@
     var p = currentProfile ? currentProfile.user : null;
     if(currentUser && p){
       chip.style.display="inline-flex"; link.style.display="none";
-      $("chipAvatar").textContent = (p.name||"?").charAt(0).toUpperCase();
+      if(p.avatar){ $("chipAvatar").innerHTML = '<img src="'+esc(p.avatar)+'" alt="" />'; }
+      else { $("chipAvatar").textContent = (p.name||"?").charAt(0).toUpperCase(); }
       $("chipHandle").textContent = p.handle;
     } else { chip.style.display="none"; link.style.display=""; }
     $("profileSignedOut").hidden = !!currentUser;
@@ -1976,7 +2013,15 @@
     wrap.hidden=false;
     var dl = (currentProfile.downloadIds || []).map(function(id){ return findTape(id); }).filter(Boolean);
     var up = (currentProfile.uploadIds || []).map(function(id){ return findTape(id); }).filter(Boolean);
-    var html = '<div class="profile-head"><span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span><div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · '+(p.type==="artist"?"Artist":"Fan")+' profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
+    var headAvatar = p.avatar ? '<img class="avatar-img" src="'+esc(p.avatar)+'" alt="'+esc(p.name)+' profile photo" />' : '<span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span>';
+    var html = '<div class="profile-head">'+headAvatar+'<div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · '+(p.type==="artist"?"Artist":"Fan")+' profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
+    if(p.bio) html += '<p class="profile-bio">'+esc(p.bio)+'</p>';
+    html += '<div class="form-card" style="margin-top:16px"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 4px;text-transform:uppercase">Edit profile</h3>';
+    html += '<p style="color:var(--muted);margin:0 0 12px;font-size:14.5px">Your photo, name, city, and bio — fans see them on your public profile.</p>';
+    html += '<div class="mt-actions" style="margin-bottom:12px"><input type="file" id="profileAvatarInput" accept="image/*" aria-label="Choose a profile photo" /><button class="btn btn-dark small" type="button" data-save-avatar="1">Save photo</button><button class="btn btn-outline small" type="button" data-remove-avatar="1">Remove photo</button></div>';
+    html += '<div class="mt-actions" style="margin-bottom:12px"><input type="text" id="profileName" value="'+esc(p.name||"")+'" aria-label="Your name" placeholder="Your name" /><input type="text" id="profileCity" value="'+esc(p.city||"")+'" aria-label="Your city" placeholder="e.g. Boston, MA" /></div>';
+    html += '<textarea id="profileBio" maxlength="500" placeholder="Tell fans about yourself (up to 500 characters)" aria-label="Your bio" style="width:100%;min-height:64px">'+esc(p.bio||"")+'</textarea>';
+    html += '<div class="mt-actions" style="margin-top:12px"><button class="btn btn-dark small" type="button" data-save-profile="1">Save profile</button></div></div>';
     html += '<div class="form-card" style="margin-top:16px"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 8px;text-transform:uppercase">Saved downloads</h3>';
     if(!dl.length) html += '<p style="color:var(--muted);margin:0">Nothing saved yet. Hit <strong>⬇ Free</strong> on any track and the tape lands here.</p>';
     else {
@@ -1999,6 +2044,12 @@
     html += '<p style="color:var(--muted);margin:0 0 10px;font-size:14.5px">Optional — your email is private and never shown to anyone. We only use it to send you Get Raw promotions, and only if you tick the box.</p>';
     html += '<div class="mt-actions"><input type="email" id="profileEmail" placeholder="you@example.com" value="'+esc(p.email||"")+'" aria-label="Your email address (optional)" /><button class="btn btn-dark small" type="button" data-save-email="1">Save email</button></div>';
     html += '<label style="display:flex;gap:8px;align-items:flex-start;margin:12px 0 0;font-size:14.5px"><input type="checkbox" id="profilePromo" style="margin-top:3px"'+(p.promoOptIn?" checked":"")+' /> Send me promotions from Get Raw</label></div>';
+    html += '<div class="form-card" style="margin-top:16px"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 4px;text-transform:uppercase">Change password</h3>';
+    html += '<p style="color:var(--muted);margin:0 0 12px;font-size:14.5px">You stay signed in after changing it — just use the new password next time you sign in.</p>';
+    html += '<div class="mt-actions" style="margin-bottom:12px"><input type="password" id="pwCurrent" placeholder="Current password" autocomplete="current-password" aria-label="Current password" /></div>';
+    html += '<div class="mt-actions" style="margin-bottom:12px"><input type="password" id="pwNew" placeholder="New password (at least 6 characters)" autocomplete="new-password" aria-label="New password" /></div>';
+    html += '<div class="mt-actions" style="margin-bottom:12px"><input type="password" id="pwNew2" placeholder="Type the new password again" autocomplete="new-password" aria-label="Confirm new password" /></div>';
+    html += '<div class="mt-actions"><button class="btn btn-dark small" type="button" data-change-password="1">Change password</button></div></div>';
     html += '<div class="form-card" style="margin-top:16px;border-color:#B3261E"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 8px;text-transform:uppercase;color:#B3261E">Danger zone</h3>';
     html += '<p style="color:var(--muted);margin:0 0 12px;font-size:14.5px">Delete your account for good — this removes your profile and every tape on it, and signs you out. To remove just one tape, use Delete on that tape in My Tapes instead.</p>';
     html += '<button class="btn btn-danger small" type="button" data-delete-account="1">Delete my account</button></div>';
@@ -2040,6 +2091,59 @@
           if(currentProfile){ currentProfile.user.email = r.data.user.email || ""; currentProfile.user.promoOptIn = !!r.data.user.promoOptIn; }
           toast(email ? "Email saved." + (promo ? " You're on the promotions list." : "") : "Email removed — you're off the promotions list.");
           renderAll();
+        });
+      });
+    });
+    wrap.querySelectorAll("[data-save-profile]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var name = $("profileName") ? $("profileName").value.trim() : "";
+        var city = $("profileCity") ? $("profileCity").value.trim() : "";
+        var bio = $("profileBio") ? $("profileBio").value.trim() : "";
+        if(!name){ toast("Add your name first."); return; }
+        api("/api/auth/me", { method:"PATCH", body: JSON.stringify({ name: name, city: city, bio: bio }) }).then(function(r){
+          if(!r || r.status!==200 || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't save your profile."); return; }
+          if(currentProfile && r.data.user) currentProfile.user = r.data.user;
+          toast("Profile saved.");
+          renderAll();
+        });
+      });
+    });
+    wrap.querySelectorAll("[data-save-avatar]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var inp = $("profileAvatarInput");
+        var f = inp && inp.files ? inp.files[0] : null;
+        if(!f){ toast("Choose a photo first."); return; }
+        var fd = new FormData(); fd.append("avatar", f, f.name);
+        api("/api/auth/me/avatar", { method:"POST", json:false, body: fd }).then(function(r){
+          if(!r || r.status!==200 || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't save that photo."); return; }
+          if(currentProfile && r.data.user) currentProfile.user = r.data.user;
+          toast("Profile photo saved.");
+          renderAll();
+        });
+      });
+    });
+    wrap.querySelectorAll("[data-remove-avatar]").forEach(function(b){
+      b.addEventListener("click", function(){
+        api("/api/auth/me/avatar", { method:"DELETE" }).then(function(r){
+          if(!r || r.status!==200 || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't remove that photo."); return; }
+          if(currentProfile && r.data.user) currentProfile.user = r.data.user;
+          toast("Profile photo removed.");
+          renderAll();
+        });
+      });
+    });
+    wrap.querySelectorAll("[data-change-password]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var cur = $("pwCurrent") ? $("pwCurrent").value : "";
+        var nw = $("pwNew") ? $("pwNew").value : "";
+        var nw2 = $("pwNew2") ? $("pwNew2").value : "";
+        if(!cur){ toast("Enter your current password."); return; }
+        if(!nw || nw.length < 6){ toast("Your new password needs at least 6 characters."); return; }
+        if(nw !== nw2){ toast("The new passwords don't match — type it the same way twice."); return; }
+        api("/api/auth/password", { method:"POST", body: JSON.stringify({ currentPassword: cur, newPassword: nw }) }).then(function(r){
+          if(!r || r.status!==200 || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't change your password."); return; }
+          if($("pwCurrent")) $("pwCurrent").value=""; if($("pwNew")) $("pwNew").value=""; if($("pwNew2")) $("pwNew2").value="";
+          toast("Password changed — you're still signed in.");
         });
       });
     });
