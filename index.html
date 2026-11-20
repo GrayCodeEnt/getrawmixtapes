@@ -66,6 +66,15 @@
   /* ---------- Header ---------- */
   .site-head{position:sticky;top:0;z-index:60;background:var(--head-bg);color:var(--head-text);border-bottom:3px solid var(--orange)}
   .head-in{max-width:1200px;margin:0 auto;padding:8px 14px;display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap}
+  .head-search{max-width:1200px;margin:0 auto;padding:0 14px 10px;position:relative}
+  .head-search form{display:flex;gap:8px}
+  .head-search input{flex:1;min-width:0;padding:9px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font-size:15px}
+  .global-search-results{position:absolute;left:14px;right:14px;top:100%;background:var(--paper);color:var(--ink);border:1.5px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:70;overflow:hidden}
+  .global-search-results button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px;color:var(--ink)}
+  .global-search-results button:last-child{border-bottom:0}
+  .global-search-results button:hover{background:var(--surface-2)}
+  .global-search-results .gs-handle{color:var(--muted);font-size:13.5px}
+  .global-search-results .gs-empty{padding:12px;color:var(--muted)}
   .brand{display:flex;align-items:center;gap:10px;text-decoration:none;min-width:0;flex:0 1 auto}
   .brand svg{flex:0 0 auto}
   .brand-words{line-height:.95;white-space:nowrap}
@@ -367,6 +376,13 @@
       <a class="btn btn-ghost small" href="/sign-in" data-nav="sign-in" id="signInLink">Sign In</a>
       <a class="btn btn-orange small" href="/upload" data-nav="upload">Upload a Tape</a>
     </div>
+  </div>
+  <div class="head-search">
+    <form id="globalSearchForm" role="search" autocomplete="off">
+      <input type="search" id="globalSearch" placeholder="Search artists…" aria-label="Search artists" />
+      <button type="submit" class="btn btn-orange small">Search</button>
+    </form>
+    <div id="globalSearchResults" class="global-search-results" hidden></div>
   </div>
 </header>
 
@@ -1525,6 +1541,71 @@
     var d = $("tapeDialog");
     if(d && d.open){ try{ d.close(); }catch(e){} }
     showPage("artist");
+  }
+  // Global search — the bar at the top of every page. Fans type an artist
+  // name or @handle, pick them from the list to open their profile, or hit
+  // Search / Enter to see their tapes in the Tapes feed.
+  function artistMatches(q){
+    q = (q||"").trim().toLowerCase();
+    if(!q) return [];
+    var seen = {}, out = [];
+    tapes.forEach(function(t){
+      if(!isLive(t)) return;
+      var h = t.handle || "";
+      if(seen[h]) return;
+      var name = (t.artist||"").toLowerCase();
+      var handle = h.toLowerCase();
+      if(name.indexOf(q)>=0 || handle.indexOf(q)>=0 || handle.replace(/^@/,"").indexOf(q)>=0){
+        seen[h]=1; out.push({ name: t.artist, handle: h, avatar: t.artistAvatar || "" });
+      }
+    });
+    return out.slice(0,6);
+  }
+  function hideGlobalResults(){ var r=$("globalSearchResults"); if(r) r.hidden=true; }
+  function renderGlobalResults(){
+    var inp=$("globalSearch"), box=$("globalSearchResults");
+    if(!inp || !box) return;
+    var q=inp.value.trim();
+    if(!q){ hideGlobalResults(); return; }
+    var m=artistMatches(q);
+    if(!m.length){
+      box.innerHTML='<div class="gs-empty">No artist found for &ldquo;'+esc(q)+'&rdquo; — try the Tapes search for tape titles.</div>';
+      box.hidden=false; return;
+    }
+    box.innerHTML="";
+    m.forEach(function(a){
+      var b=document.createElement("button");
+      b.type="button";
+      b.innerHTML=artistAvatarHTML({ artist: a.name, artistAvatar: a.avatar })+'<span><strong>'+esc(a.name)+'</strong> <span class="gs-handle">'+esc(a.handle)+'</span></span>';
+      b.addEventListener("click", function(){ hideGlobalResults(); inp.value=""; openArtist(a.handle); });
+      box.appendChild(b);
+    });
+    box.hidden=false;
+  }
+  if($("globalSearchForm")){
+    $("globalSearch").addEventListener("input", renderGlobalResults);
+    $("globalSearch").addEventListener("focus", renderGlobalResults);
+    $("globalSearch").addEventListener("keydown", function(ev){ if(ev.key==="Escape"){ hideGlobalResults(); ev.target.blur(); } });
+    $("globalSearchForm").addEventListener("submit", function(ev){
+      ev.preventDefault();
+      var inp=$("globalSearch");
+      var q=inp.value.trim();
+      if(!q) return;
+      var m=artistMatches(q);
+      hideGlobalResults(); inp.value="";
+      if(m.length===1){ openArtist(m[0].handle); return; }
+      var exact=null;
+      m.forEach(function(a){ if(a.handle.toLowerCase()==="@"+q.toLowerCase() || a.name.toLowerCase()===q.toLowerCase()) exact=a; });
+      if(exact){ openArtist(exact.handle); return; }
+      var sb=$("searchBox");
+      if(sb) sb.value=q;
+      showPage("tapes");
+      renderTapes();
+    });
+    document.addEventListener("click", function(ev){
+      var box=$("globalSearchResults");
+      if(box && !box.hidden && ev.target.closest && !ev.target.closest(".head-search")) hideGlobalResults();
+    });
   }
   function renderArtist(){
     var wrap = $("artistWrap");
