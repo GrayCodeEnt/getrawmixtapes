@@ -261,6 +261,11 @@
   .profile-head h3{margin:0;font-size:24px}
   .profile-head .handle{color:var(--orange-dark);font-weight:700}
   .profile-head .avatar-img{width:64px;height:64px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+  .profile-head .avatar-edit-btn{background:none;border:0;padding:0;cursor:pointer;position:relative;flex:0 0 auto;border-radius:50%;line-height:0}
+  .profile-head .avatar-edit-btn:hover .avatar-img,.profile-head .avatar-edit-btn:hover .avatar{outline:3px solid var(--orange);outline-offset:2px}
+  .profile-head .avatar-edit-btn:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+  .avatar-edit-badge{position:absolute;right:-4px;bottom:0;background:var(--orange);color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:3px 7px;border:2px solid var(--surface);line-height:1}
+  .avatar-edit-hint{color:var(--muted);font-size:13.5px;margin:8px 0 0}
   .artist-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:-8px;margin-right:6px}
   .artist-avatar-fallback{background:var(--orange);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:"Anton",sans-serif;font-size:14px}
   .profile-bio{margin:12px 0 0;color:var(--muted);font-size:14.5px;white-space:pre-wrap}
@@ -1153,6 +1158,37 @@
   function normHandle(h){ h = String(h||"").trim().toLowerCase(); if(h && h.charAt(0)!=="@") h="@"+h; return h.replace(/\s+/g,""); }
   function fmt(n){ return n>=1000 ? (n/1000).toFixed(1).replace(/\.0$/,"")+"k" : String(n); }
   function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove("on");},3200); }
+  // Tap-your-photo edit: clicking your own profile picture opens the file
+  // picker, and picking a photo uploads it right away (same endpoint as
+  // the "Save photo" button in Edit profile). Only ever wired up on your
+  // own profile / artist page — other artists' pictures stay plain.
+  function uploadAvatarFile(f){
+    if(!f) return;
+    var fd = new FormData(); fd.append("avatar", f, f.name);
+    api("/api/auth/me/avatar", { method:"POST", json:false, body: fd }).then(function(r){
+      if(!r || r.status!==200 || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't save that photo."); return; }
+      if(currentProfile && r.data.user) currentProfile.user = r.data.user;
+      toast("Profile photo saved.");
+      refreshFeed().then(function(){ renderAll(); });
+    });
+  }
+  function bindAvatarEdit(wrap){
+    if(!wrap) return;
+    wrap.querySelectorAll("[data-edit-avatar]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var inp = wrap.querySelector(".avatar-quick-input");
+        if(inp) inp.click();
+      });
+    });
+    var inp = wrap.querySelector(".avatar-quick-input");
+    if(inp){
+      inp.addEventListener("change", function(){
+        var f = inp.files && inp.files[0];
+        inp.value = "";
+        if(f) uploadAvatarFile(f);
+      });
+    }
+  }
   function isLive(tape){ return !tape.draft && (!tape.releaseAt || tape.releaseAt <= Date.now()); }
   function isSingle(tape){ return isLive(tape) && (tape.tracks||[]).length===1; }
   function isScheduled(tape){ return !tape.draft && !!tape.releaseAt && tape.releaseAt > Date.now(); }
@@ -1625,8 +1661,11 @@
       var p = r.data.profile, list = r.data.tapes || [], totals = r.data.totals || {};
       document.title = p.name + " — Get Raw Mixtapes";
       var tag = normCashtag(p.cashtag);
-      var headAvatar = p.avatar ? '<img class="avatar-img" src="'+esc(p.avatar)+'" alt="'+esc(p.name)+' profile photo" />' : '<span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span>';
+      var isOwnArtist = !!(currentUser && p.handle === currentUser);
+      var headAvatarInner = p.avatar ? '<img class="avatar-img" src="'+esc(p.avatar)+'" alt="'+esc(p.name)+' profile photo" />' : '<span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span>';
+      var headAvatar = isOwnArtist ? '<button type="button" class="avatar-edit-btn" data-edit-avatar="1" title="Tap to change your photo" aria-label="Change your profile photo">'+headAvatarInner+'<span class="avatar-edit-badge">Edit</span></button>' : headAvatarInner;
       var html = '<div class="profile-head">'+headAvatar+'<div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · Artist profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
+      if(isOwnArtist) html += '<p class="avatar-edit-hint">Tap your photo to change it.</p><input type="file" class="avatar-quick-input" accept="image/*" hidden aria-label="Choose a profile photo" />';
       if(p.bio) html += '<p class="profile-bio">'+esc(p.bio)+'</p>';
       html += '<p class="artist-page-stats"><span><b>'+exactNum(totals.publishedTapes||0)+'</b> tapes</span><span><b>'+exactNum(totals.plays||0)+'</b> plays</span><span><b>'+exactNum(totals.downloads||0)+'</b> downloads</span></p>';
       if(tag) html += '<p style="margin:12px 0 0"><a class="btn small" href="'+cashUrl(tag)+'" target="_blank" rel="noopener" style="background:#00D632;border-color:#00D632;color:#06281A">Donate — Cash App '+esc(tag)+'</a> <span style="color:var(--muted);font-size:13.5px">Donations go straight to the artist via Cash App.</span></p>';
@@ -1636,6 +1675,7 @@
         html += '<div class="empty" style="margin-top:16px"><h3>No published tapes yet</h3><p>'+esc(p.name)+' has a profile but nothing live in the feed yet.</p></div>';
       }
       wrap.innerHTML = html;
+      bindAvatarEdit(wrap);
       if(mapped.length){
         var grid = document.createElement("div"); grid.className="tape-grid"; grid.style.marginTop="16px";
         mapped.forEach(function(m){ grid.appendChild(tapeCard(m)); });
@@ -2224,8 +2264,10 @@
     wrap.hidden=false;
     var dl = (currentProfile.downloadIds || []).map(function(id){ return findTape(id); }).filter(Boolean);
     var up = (currentProfile.uploadIds || []).map(function(id){ return findTape(id); }).filter(Boolean);
-    var headAvatar = p.avatar ? '<img class="avatar-img" src="'+esc(p.avatar)+'" alt="'+esc(p.name)+' profile photo" />' : '<span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span>';
+    var headAvatarInner = p.avatar ? '<img class="avatar-img" src="'+esc(p.avatar)+'" alt="'+esc(p.name)+' profile photo" />' : '<span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span>';
+    var headAvatar = '<button type="button" class="avatar-edit-btn" data-edit-avatar="1" title="Tap to change your photo" aria-label="Change your profile photo">'+headAvatarInner+'<span class="avatar-edit-badge">Edit</span></button>';
     var html = '<div class="profile-head">'+headAvatar+'<div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · '+(p.type==="artist"?"Artist":"Fan")+' profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
+    html += '<p class="avatar-edit-hint">Tap your photo to change it.</p><input type="file" class="avatar-quick-input" accept="image/*" hidden aria-label="Choose a profile photo" />';
     if(p.bio) html += '<p class="profile-bio">'+esc(p.bio)+'</p>';
     html += '<div class="form-card" style="margin-top:16px"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 4px;text-transform:uppercase">Edit profile</h3>';
     html += '<p style="color:var(--muted);margin:0 0 12px;font-size:14.5px">Your photo, name, city, and bio — fans see them on your public profile.</p>';
@@ -2265,6 +2307,7 @@
     html += '<p style="color:var(--muted);margin:0 0 12px;font-size:14.5px">Delete your account for good — this removes your profile and every tape on it, and signs you out. To remove just one tape, use Delete on that tape in My Tapes instead.</p>';
     html += '<button class="btn btn-danger small" type="button" data-delete-account="1">Delete my account</button></div>';
     wrap.innerHTML = html;
+    bindAvatarEdit(wrap);
     wrap.querySelectorAll("[data-open]").forEach(function(b){
       b.addEventListener("click", function(){ openTape(b.getAttribute("data-open")); });
     });

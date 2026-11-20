@@ -66,6 +66,15 @@
   /* ---------- Header ---------- */
   .site-head{position:sticky;top:0;z-index:60;background:var(--head-bg);color:var(--head-text);border-bottom:3px solid var(--orange)}
   .head-in{max-width:1200px;margin:0 auto;padding:8px 14px;display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap}
+  .head-search{max-width:1200px;margin:0 auto;padding:0 14px 10px;position:relative}
+  .head-search form{display:flex;gap:8px}
+  .head-search input{flex:1;min-width:0;padding:9px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font-size:15px}
+  .global-search-results{position:absolute;left:14px;right:14px;top:100%;background:var(--paper);color:var(--ink);border:1.5px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:70;overflow:hidden}
+  .global-search-results button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px;color:var(--ink)}
+  .global-search-results button:last-child{border-bottom:0}
+  .global-search-results button:hover{background:var(--surface-2)}
+  .global-search-results .gs-handle{color:var(--muted);font-size:13.5px}
+  .global-search-results .gs-empty{padding:12px;color:var(--muted)}
   .brand{display:flex;align-items:center;gap:10px;text-decoration:none;min-width:0;flex:0 1 auto}
   .brand svg{flex:0 0 auto}
   .brand-words{line-height:.95;white-space:nowrap}
@@ -252,6 +261,13 @@
   .profile-head h3{margin:0;font-size:24px}
   .profile-head .handle{color:var(--orange-dark);font-weight:700}
   .profile-head .avatar-img{width:64px;height:64px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+  .profile-head .avatar-edit-btn{background:none;border:0;padding:0;cursor:pointer;position:relative;flex:0 0 auto;border-radius:50%;line-height:0}
+  .profile-head .avatar-edit-btn:hover .avatar-img,.profile-head .avatar-edit-btn:hover .avatar{outline:3px solid var(--orange);outline-offset:2px}
+  .profile-head .avatar-edit-btn:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+  .avatar-edit-badge{position:absolute;right:-4px;bottom:0;background:var(--orange);color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:3px 7px;border:2px solid var(--surface);line-height:1}
+  .avatar-edit-hint{color:var(--muted);font-size:13.5px;margin:8px 0 0}
+  .artist-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:-8px;margin-right:6px}
+  .artist-avatar-fallback{background:var(--orange);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:"Anton",sans-serif;font-size:14px}
   .profile-bio{margin:12px 0 0;color:var(--muted);font-size:14.5px;white-space:pre-wrap}
   .user-chip .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}
   @media (prefers-color-scheme: dark){ .profile-head .handle{color:var(--orange)} }
@@ -365,6 +381,13 @@
       <a class="btn btn-ghost small" href="/sign-in" data-nav="sign-in" id="signInLink">Sign In</a>
       <a class="btn btn-orange small" href="/upload" data-nav="upload">Upload a Tape</a>
     </div>
+  </div>
+  <div class="head-search">
+    <form id="globalSearchForm" role="search" autocomplete="off">
+      <input type="search" id="globalSearch" placeholder="Search artists…" aria-label="Search artists" />
+      <button type="submit" class="btn btn-orange small">Search</button>
+    </form>
+    <div id="globalSearchResults" class="global-search-results" hidden></div>
   </div>
 </header>
 
@@ -686,10 +709,10 @@
           <div class="track-rows" id="trackRows"></div>
         </div>
       </div>
-      <p style="margin:18px 0 0;color:var(--muted);font-size:14.5px">Two separate choices — nothing goes public unless you pick it. <strong>Save as Draft</strong> keeps the tape private in your My Tapes, only you can see it. <strong>Publish Now</strong> puts it straight into the Tapes feed. From My Tapes you can still publish a draft later, or <strong>Schedule a Premiere</strong> with a countdown.</p>
+      <p style="margin:18px 0 0;color:var(--muted);font-size:14.5px">Two separate choices — nothing goes public unless you pick it. <strong>Save as draft</strong> keeps the tape private in your My Tapes, only you can see it. <strong>Publish Now</strong> puts it straight into the Tapes feed. From My Tapes you can still publish a draft later, or <strong>Schedule a Premiere</strong> with a countdown.</p>
       <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-        <button type="submit" class="btn btn-orange" id="saveDraftBtn">Save as Draft — Free</button>
-        <button type="submit" class="btn btn-dark" id="publishNowBtn">Publish Now — Free</button>
+        <button type="submit" class="btn btn-orange" id="saveDraftBtn">Save as draft</button>
+        <button type="submit" class="btn btn-dark" id="publishNowBtn">Publish Now</button>
         <button type="reset" class="btn btn-outline">Clear form</button>
       </div>
       <div class="form-msg" id="uploadMsg" role="status"></div>
@@ -855,6 +878,34 @@
   </div>
 </dialog>
 
+<dialog id="editDialog" aria-labelledby="editTitle">
+  <div class="dlg-head">
+    <div style="min-width:0">
+      <h3 id="editTitle">Edit mixtape</h3>
+      <div style="color:var(--muted);font-size:14.5px">Change anything you uploaded — title, artist, DJ, genre, city, description, Cash App, cover, and each song title. Your @handle stays the same.</div>
+    </div>
+    <button class="dlg-close" id="editClose" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="dlg-body">
+    <div class="form-grid">
+      <div class="field"><label for="eTitle">Tape title *</label><input type="text" id="eTitle" required /></div>
+      <div class="field"><label for="eArtist">Artist name *</label><input type="text" id="eArtist" required /></div>
+      <div class="field"><label for="eDj">DJ host</label><input type="text" id="eDj" placeholder="e.g. DJ Drama — or leave blank" /></div>
+      <div class="field"><label for="eGenre">Genre *</label><select id="eGenre"><option>Hip-Hop</option><option>Rap</option><option>Trap</option><option>Drill</option><option>Boom Bap</option><option>R&amp;B</option><option>Afrobeats</option><option>Dancehall</option><option>Grime</option><option>Underground</option><option>Other</option></select></div>
+      <div class="field"><label for="eCity">Artist city</label><input type="text" id="eCity" placeholder="e.g. Boston, MA" /></div>
+      <div class="field"><label for="eCashtag">Cash App $cashtag</label><input type="text" id="eCashtag" placeholder="e.g. $YourCashtag" autocomplete="off" /></div>
+      <div class="field full"><label for="eDesc">Description</label><textarea id="eDesc" placeholder="What is this tape? Who produced it, who's featured, what should fans know?"></textarea></div>
+      <div class="field full"><label for="eCover">Cover art — pick a new one to replace it</label><input type="file" id="eCover" accept="image/*" /><span class="hint" id="eCoverNow"></span><label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;margin-top:8px"><input type="checkbox" id="eRemoveCover" style="margin-top:3px" /> Remove the cover art</label></div>
+      <div class="field full"><label>Song titles — fix any title, remove a song</label><div class="track-rows" id="eTracks"></div><span class="hint">To swap the audio itself, remove the song here, then use Add tracks in My Tapes. At least one song must stay.</span></div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+      <button type="button" class="btn btn-orange" id="eSave">Save edits</button>
+      <button type="button" class="btn btn-outline" id="eCancel">Cancel</button>
+    </div>
+    <div class="form-msg" id="eMsg" role="status"></div>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script>(function(){
@@ -888,6 +939,8 @@
   var currentProfile = null; // { user, uploadIds:[tapeId], downloadIds:[tapeId] } from /api/auth/me
   var rankMode = "global";
   var currentTapeId = null;
+  var editTapeId = null;      // tape open in the Edit dialog
+  var editRemovedIdx = [];  // track indexes marked for removal in the Edit dialog
   var countedPlays = {};     // trackKey -> true (count a play once per session per track)
   var apiDown = false;
 
@@ -921,6 +974,7 @@
     if(!t) return null;
     return {
       id: t.id, title: t.title, artist: t.artist, handle: t.handle,
+      artistAvatar: t.artistAvatar || "",
       dj: t.dj || "", genre: t.genre, city: t.city || "", desc: t.desc || "",
       cover: t.cover || t.coverUrl || null,
       tracks: (t.tracks || []).map(function(tr){ return { title: tr.title, fileName: tr.fileName, url: tr.url, downloadUrl: tr.downloadUrl }; }),
@@ -1104,6 +1158,37 @@
   function normHandle(h){ h = String(h||"").trim().toLowerCase(); if(h && h.charAt(0)!=="@") h="@"+h; return h.replace(/\s+/g,""); }
   function fmt(n){ return n>=1000 ? (n/1000).toFixed(1).replace(/\.0$/,"")+"k" : String(n); }
   function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove("on");},3200); }
+  // Tap-your-photo edit: clicking your own profile picture opens the file
+  // picker, and picking a photo uploads it right away (same endpoint as
+  // the "Save photo" button in Edit profile). Only ever wired up on your
+  // own profile / artist page — other artists' pictures stay plain.
+  function uploadAvatarFile(f){
+    if(!f) return;
+    var fd = new FormData(); fd.append("avatar", f, f.name);
+    api("/api/auth/me/avatar", { method:"POST", json:false, body: fd }).then(function(r){
+      if(!r || r.status!==200 || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't save that photo."); return; }
+      if(currentProfile && r.data.user) currentProfile.user = r.data.user;
+      toast("Profile photo saved.");
+      refreshFeed().then(function(){ renderAll(); });
+    });
+  }
+  function bindAvatarEdit(wrap){
+    if(!wrap) return;
+    wrap.querySelectorAll("[data-edit-avatar]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var inp = wrap.querySelector(".avatar-quick-input");
+        if(inp) inp.click();
+      });
+    });
+    var inp = wrap.querySelector(".avatar-quick-input");
+    if(inp){
+      inp.addEventListener("change", function(){
+        var f = inp.files && inp.files[0];
+        inp.value = "";
+        if(f) uploadAvatarFile(f);
+      });
+    }
+  }
   function isLive(tape){ return !tape.draft && (!tape.releaseAt || tape.releaseAt <= Date.now()); }
   function isSingle(tape){ return isLive(tape) && (tape.tracks||[]).length===1; }
   function isScheduled(tape){ return !tape.draft && !!tape.releaseAt && tape.releaseAt > Date.now(); }
@@ -1235,6 +1320,11 @@
     if(tape.cover) return '<img src="'+tape.cover+'" alt="Cover art for '+esc(tape.title)+' by '+esc(tape.artist)+'" loading="lazy" />';
     return '<div class="cover-fallback"><svg width="44" height="30" viewBox="0 0 46 32" aria-hidden="true"><rect x="1.5" y="1.5" width="43" height="29" rx="4" fill="#EDEDED"/><rect x="6" y="6" width="34" height="9" fill="#F25F2D"/><circle cx="15" cy="19" r="5" fill="none" stroke="#0D0D0D" stroke-width="2.4"/><circle cx="31" cy="19" r="5" fill="none" stroke="#0D0D0D" stroke-width="2.4"/></svg><span class="cf-title">'+esc(tape.title)+'</span><span class="cf-artist">'+esc(tape.artist)+'</span></div>';
   }
+  function artistAvatarHTML(t){
+    var name = (t.artist || "?");
+    if(t.artistAvatar) return '<img class="artist-avatar" src="'+esc(t.artistAvatar)+'" alt="" />';
+    return '<span class="artist-avatar artist-avatar-fallback">'+esc(name.charAt(0).toUpperCase())+'</span>';
+  }
   function tapeCard(tape){
     var live = isLive(tape);
     var btn = document.createElement("button");
@@ -1244,7 +1334,7 @@
     btn.innerHTML =
       '<span class="tape-cover">'+coverHTML(tape)+badge+'</span>'+
       '<span class="tape-meta"><h3>'+esc(tape.title)+'</h3>'+
-      '<span class="artist artist-link" data-artist="'+esc(tape.handle||"")+'" role="link" tabindex="0" title="View '+esc(tape.artist)+' profile">'+esc(tape.artist)+'</span>'+
+      '<span class="artist artist-link" data-artist="'+esc(tape.handle||"")+'" role="link" tabindex="0" title="View '+esc(tape.artist)+' profile">'+artistAvatarHTML(tape)+esc(tape.artist)+'</span>'+
       '<span class="sub">'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'')+'</span>'+
       '<span class="tape-stats"><span>▶ '+fmt(tape.plays)+' plays</span><span>⬇ '+fmt(tape.downloads)+' downloads</span><span>'+tape.tracks.length+' track'+(tape.tracks.length===1?'':'s')+'</span></span></span>';
     btn.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; openTape(tape.id); });
@@ -1341,11 +1431,11 @@
     var aw = $("aotwWrap");
     if(live.length && (live[0].plays+live[0].downloads)>0){
       var t = live[0];
-      aw.innerHTML = '<div class="aotw"><div>'+coverHTML(t)+'</div><div class="aotw-body"><span class="k">Artist of the Week</span><h3><span class="artist-link" data-artist="'+esc(t.handle)+'">'+esc(t.artist)+'</span></h3><p>Running the site right now with <strong style="color:var(--orange)">'+esc(t.title)+'</strong> — '+fmt(t.plays)+' plays and '+fmt(t.downloads)+' downloads and counting.</p><button class="btn btn-orange" type="button" id="aotwOpen">Play the Tape</button></div></div>';
+      aw.innerHTML = '<div class="aotw"><div>'+coverHTML(t)+'</div><div class="aotw-body"><span class="k">Artist of the Week</span><h3><span class="artist-link" data-artist="'+esc(t.handle)+'">'+artistAvatarHTML(t)+esc(t.artist)+'</span></h3><p>Running the site right now with <strong style="color:var(--orange)">'+esc(t.title)+'</strong> — '+fmt(t.plays)+' plays and '+fmt(t.downloads)+' downloads and counting.</p><button class="btn btn-orange" type="button" id="aotwOpen">Play the Tape</button></div></div>';
       $("aotwOpen").addEventListener("click", function(){ openTape(t.id); });
     } else if(live.length){
       var t2 = live[0];
-      aw.innerHTML = '<div class="aotw"><div>'+coverHTML(t2)+'</div><div class="aotw-body"><span class="k">Artist of the Week</span><h3><span class="artist-link" data-artist="'+esc(t2.handle)+'">'+esc(t2.artist)+'</span></h3><p>First tape on the board: <strong style="color:var(--orange)">'+esc(t2.title)+'</strong>. Plays and downloads this week decide who holds the crown — run it up.</p><button class="btn btn-orange" type="button" id="aotwOpen">Play the Tape</button></div></div>';
+      aw.innerHTML = '<div class="aotw"><div>'+coverHTML(t2)+'</div><div class="aotw-body"><span class="k">Artist of the Week</span><h3><span class="artist-link" data-artist="'+esc(t2.handle)+'">'+artistAvatarHTML(t2)+esc(t2.artist)+'</span></h3><p>First tape on the board: <strong style="color:var(--orange)">'+esc(t2.title)+'</strong>. Plays and downloads this week decide who holds the crown — run it up.</p><button class="btn btn-orange" type="button" id="aotwOpen">Play the Tape</button></div></div>';
       $("aotwOpen").addEventListener("click", function(){ openTape(t2.id); });
     }
   }
@@ -1401,7 +1491,7 @@
     r.list.forEach(function(t,i){
       var li = document.createElement("li");
       var b = document.createElement("button"); b.type="button"; b.className="rank-row";
-      b.innerHTML = '<span class="rank-num">'+(i+1)+'</span><span class="rank-info"><strong>'+esc(t.title)+'</strong><span><span class="artist-link" data-artist="'+esc(t.handle)+'">'+esc(t.artist)+'</span> · '+esc(t.genre)+(t.city?' · '+esc(t.city):'')+'</span></span><span class="rank-stat">'+fmt(r.metric(t))+' '+r.label+'</span>';
+      b.innerHTML = '<span class="rank-num">'+(i+1)+'</span><span class="rank-info"><strong>'+esc(t.title)+'</strong><span><span class="artist-link" data-artist="'+esc(t.handle)+'">'+artistAvatarHTML(t)+esc(t.artist)+'</span> · '+esc(t.genre)+(t.city?' · '+esc(t.city):'')+'</span></span><span class="rank-stat">'+fmt(r.metric(t))+' '+r.label+'</span>';
       b.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; openTape(t.id); });
       li.appendChild(b); ol.appendChild(li);
     });
@@ -1488,6 +1578,71 @@
     if(d && d.open){ try{ d.close(); }catch(e){} }
     showPage("artist");
   }
+  // Global search — the bar at the top of every page. Fans type an artist
+  // name or @handle, pick them from the list to open their profile, or hit
+  // Search / Enter to see their tapes in the Tapes feed.
+  function artistMatches(q){
+    q = (q||"").trim().toLowerCase();
+    if(!q) return [];
+    var seen = {}, out = [];
+    tapes.forEach(function(t){
+      if(!isLive(t)) return;
+      var h = t.handle || "";
+      if(seen[h]) return;
+      var name = (t.artist||"").toLowerCase();
+      var handle = h.toLowerCase();
+      if(name.indexOf(q)>=0 || handle.indexOf(q)>=0 || handle.replace(/^@/,"").indexOf(q)>=0){
+        seen[h]=1; out.push({ name: t.artist, handle: h, avatar: t.artistAvatar || "" });
+      }
+    });
+    return out.slice(0,6);
+  }
+  function hideGlobalResults(){ var r=$("globalSearchResults"); if(r) r.hidden=true; }
+  function renderGlobalResults(){
+    var inp=$("globalSearch"), box=$("globalSearchResults");
+    if(!inp || !box) return;
+    var q=inp.value.trim();
+    if(!q){ hideGlobalResults(); return; }
+    var m=artistMatches(q);
+    if(!m.length){
+      box.innerHTML='<div class="gs-empty">No artist found for &ldquo;'+esc(q)+'&rdquo; — try the Tapes search for tape titles.</div>';
+      box.hidden=false; return;
+    }
+    box.innerHTML="";
+    m.forEach(function(a){
+      var b=document.createElement("button");
+      b.type="button";
+      b.innerHTML=artistAvatarHTML({ artist: a.name, artistAvatar: a.avatar })+'<span><strong>'+esc(a.name)+'</strong> <span class="gs-handle">'+esc(a.handle)+'</span></span>';
+      b.addEventListener("click", function(){ hideGlobalResults(); inp.value=""; openArtist(a.handle); });
+      box.appendChild(b);
+    });
+    box.hidden=false;
+  }
+  if($("globalSearchForm")){
+    $("globalSearch").addEventListener("input", renderGlobalResults);
+    $("globalSearch").addEventListener("focus", renderGlobalResults);
+    $("globalSearch").addEventListener("keydown", function(ev){ if(ev.key==="Escape"){ hideGlobalResults(); ev.target.blur(); } });
+    $("globalSearchForm").addEventListener("submit", function(ev){
+      ev.preventDefault();
+      var inp=$("globalSearch");
+      var q=inp.value.trim();
+      if(!q) return;
+      var m=artistMatches(q);
+      hideGlobalResults(); inp.value="";
+      if(m.length===1){ openArtist(m[0].handle); return; }
+      var exact=null;
+      m.forEach(function(a){ if(a.handle.toLowerCase()==="@"+q.toLowerCase() || a.name.toLowerCase()===q.toLowerCase()) exact=a; });
+      if(exact){ openArtist(exact.handle); return; }
+      var sb=$("searchBox");
+      if(sb) sb.value=q;
+      showPage("tapes");
+      renderTapes();
+    });
+    document.addEventListener("click", function(ev){
+      var box=$("globalSearchResults");
+      if(box && !box.hidden && ev.target.closest && !ev.target.closest(".head-search")) hideGlobalResults();
+    });
+  }
   function renderArtist(){
     var wrap = $("artistWrap");
     if(!wrap) return;
@@ -1506,8 +1661,11 @@
       var p = r.data.profile, list = r.data.tapes || [], totals = r.data.totals || {};
       document.title = p.name + " — Get Raw Mixtapes";
       var tag = normCashtag(p.cashtag);
-      var headAvatar = p.avatar ? '<img class="avatar-img" src="'+esc(p.avatar)+'" alt="'+esc(p.name)+' profile photo" />' : '<span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span>';
+      var isOwnArtist = !!(currentUser && p.handle === currentUser);
+      var headAvatarInner = p.avatar ? '<img class="avatar-img" src="'+esc(p.avatar)+'" alt="'+esc(p.name)+' profile photo" />' : '<span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span>';
+      var headAvatar = isOwnArtist ? '<button type="button" class="avatar-edit-btn" data-edit-avatar="1" title="Tap to change your photo" aria-label="Change your profile photo">'+headAvatarInner+'<span class="avatar-edit-badge">Edit</span></button>' : headAvatarInner;
       var html = '<div class="profile-head">'+headAvatar+'<div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · Artist profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
+      if(isOwnArtist) html += '<p class="avatar-edit-hint">Tap your photo to change it.</p><input type="file" class="avatar-quick-input" accept="image/*" hidden aria-label="Choose a profile photo" />';
       if(p.bio) html += '<p class="profile-bio">'+esc(p.bio)+'</p>';
       html += '<p class="artist-page-stats"><span><b>'+exactNum(totals.publishedTapes||0)+'</b> tapes</span><span><b>'+exactNum(totals.plays||0)+'</b> plays</span><span><b>'+exactNum(totals.downloads||0)+'</b> downloads</span></p>';
       if(tag) html += '<p style="margin:12px 0 0"><a class="btn small" href="'+cashUrl(tag)+'" target="_blank" rel="noopener" style="background:#00D632;border-color:#00D632;color:#06281A">Donate — Cash App '+esc(tag)+'</a> <span style="color:var(--muted);font-size:13.5px">Donations go straight to the artist via Cash App.</span></p>';
@@ -1517,6 +1675,7 @@
         html += '<div class="empty" style="margin-top:16px"><h3>No published tapes yet</h3><p>'+esc(p.name)+' has a profile but nothing live in the feed yet.</p></div>';
       }
       wrap.innerHTML = html;
+      bindAvatarEdit(wrap);
       if(mapped.length){
         var grid = document.createElement("div"); grid.className="tape-grid"; grid.style.marginTop="16px";
         mapped.forEach(function(m){ grid.appendChild(tapeCard(m)); });
@@ -1568,7 +1727,7 @@
     if(!wrap) return;
     var list = tapes.filter(isSingle).slice().sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); }).slice(0,3);
     if(!list.length){
-      wrap.innerHTML = '<div class="empty"><h3>No singles yet</h3><p>Drop one song and it\'ll land here.</p><a class="btn btn-orange" href="/upload" data-nav="upload">Upload a Single — Free</a></div>';
+      wrap.innerHTML = '<div class="empty"><h3>No singles yet</h3><p>Drop one song and it\'ll land here.</p><a class="btn btn-orange" href="/upload" data-nav="upload">Upload a Single</a></div>';
       return;
     }
     var grid = document.createElement("div"); grid.className="tape-grid";
@@ -1623,7 +1782,7 @@
     var live = isLive(tape) || dialogPreview;
     $("dlgTitle").textContent = tape.title;
     $("dlgCover").innerHTML = tape.cover ? '<img src="'+tape.cover+'" alt="Cover art for '+esc(tape.title)+'" style="width:110px;height:110px;border-radius:8px;object-fit:cover" />' : '<div style="width:110px;height:110px;border-radius:8px;background:var(--ink);position:relative;overflow:hidden">'+coverHTML(tape)+'</div>';
-    $("dlgMeta").innerHTML = '<a href="/artist/'+esc((tape.handle||"").replace(/^@/,""))+'" data-artist="'+esc(tape.handle)+'" class="artist-link">'+esc(tape.artist)+'</a> ('+esc(tape.handle)+')<br>'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'');
+    $("dlgMeta").innerHTML = '<a href="/artist/'+esc((tape.handle||"").replace(/^@/,""))+'" data-artist="'+esc(tape.handle)+'" class="artist-link">'+artistAvatarHTML(tape)+esc(tape.artist)+'</a> ('+esc(tape.handle)+')<br>'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'');
     $("dlgStats").textContent = fmt(tape.plays)+" plays · "+fmt(tape.downloads)+" downloads · "+tape.tracks.length+" track"+(tape.tracks.length===1?"":"s")+" · Free download";
     $("dlgDesc").textContent = tape.desc || "";
     var lockHTML = "";
@@ -1645,6 +1804,11 @@
       li.appendChild(pb); li.appendChild(db); ol.appendChild(li);
     });
   }
+  function closeDlg(id){
+    var d = $(id); if(!d) return;
+    if(typeof d.close === "function"){ try{ d.close(); return; }catch(e){} }
+    d.removeAttribute("open");
+  }
   function openTape(id, preview){
     var tape = tapes.filter(function(t){return t.id===id;})[0];
     if(!tape) return;
@@ -1654,7 +1818,10 @@
     var d = $("tapeDialog");
     if(typeof d.showModal==="function") d.showModal(); else d.setAttribute("open","");
   }
-  $("dlgClose").addEventListener("click", function(){ $("tapeDialog").close(); });
+  $("dlgClose").addEventListener("click", function(){ closeDlg("tapeDialog"); });
+  $("editClose").addEventListener("click", function(){ closeDlg("editDialog"); });
+  $("eCancel").addEventListener("click", function(){ closeDlg("editDialog"); });
+  $("eSave").addEventListener("click", function(){ saveEditTape(); });
   $("playerClose").addEventListener("click", function(){ audio.pause(); $("player").classList.remove("on"); });
 
   /* ---------- Upload (files go to the server; the upload creates the artist profile) ---------- */
@@ -1972,6 +2139,66 @@
       renderAll();
     });
   }
+  /* ---------- Edit mixtape: every field set at upload ---------- */
+  function openEditTape(id){
+    var t = findTape(id); if(!t || t.handle!==currentUser) return;
+    editTapeId = id; editRemovedIdx = [];
+    $("eTitle").value = t.title || "";
+    $("eArtist").value = t.artist || "";
+    $("eDj").value = t.dj || "";
+    $("eGenre").value = (t.genre && GENRES.indexOf(t.genre) >= 0) ? t.genre : "Hip-Hop";
+    $("eCity").value = t.city || "";
+    $("eCashtag").value = t.cashtag || "";
+    $("eDesc").value = t.desc || "";
+    $("eCover").value = "";
+    $("eRemoveCover").checked = false;
+    $("eCoverNow").textContent = t.cover ? "Current cover is on the tape — leave the file blank to keep it." : "No cover art on this tape yet.";
+    $("eMsg").textContent = ""; $("eMsg").className = "form-msg";
+    var wrap = $("eTracks"); wrap.innerHTML = "";
+    (t.tracks || []).forEach(function(tr, i){
+      var row = document.createElement("div"); row.className = "track-row"; row.setAttribute("data-etrack-row", String(i));
+      row.innerHTML = '<span class="n">' + (i + 1) + '.</span>';
+      var inp = document.createElement("input"); inp.type = "text"; inp.className = "e-track-title"; inp.value = tr.title || tr.fileName || ("Track " + (i + 1)); inp.setAttribute("aria-label", "Title for song " + (i + 1));
+      var rm = document.createElement("button"); rm.type = "button"; rm.className = "btn btn-outline small"; rm.textContent = "Remove";
+      rm.addEventListener("click", function(){
+        if(editRemovedIdx.indexOf(i) >= 0) return;
+        var remaining = (t.tracks || []).length - editRemovedIdx.length - 1;
+        if(remaining < 1){ toast("A tape needs at least one song — keep one, or delete the whole tape instead."); return; }
+        editRemovedIdx.push(i); row.style.display = "none";
+        toast("Song " + (i + 1) + " will be removed when you save.");
+      });
+      row.appendChild(inp); row.appendChild(rm); wrap.appendChild(row);
+    });
+    var d = $("editDialog");
+    if(typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", "");
+  }
+  function saveEditTape(){
+    if(!editTapeId) return;
+    var t = findTape(editTapeId); if(!t) return;
+    var title = $("eTitle").value.trim(), artist = $("eArtist").value.trim();
+    var msg = $("eMsg");
+    if(!title){ msg.className = "form-msg err"; msg.textContent = "Add a tape title."; return; }
+    if(!artist){ msg.className = "form-msg err"; msg.textContent = "Add an artist name."; return; }
+    var fd = new FormData();
+    fd.append("title", title); fd.append("artist", artist);
+    fd.append("dj", $("eDj").value.trim()); fd.append("genre", $("eGenre").value);
+    fd.append("city", $("eCity").value.trim()); fd.append("desc", $("eDesc").value.trim());
+    fd.append("cashtag", $("eCashtag").value.trim());
+    document.querySelectorAll("#eTracks .e-track-title").forEach(function(inp){ fd.append("trackTitles", inp.value.trim()); });
+    editRemovedIdx.forEach(function(i){ fd.append("removeTracks", String(i)); });
+    if($("eRemoveCover").checked) fd.append("removeCover", "1");
+    var cover = $("eCover").files && $("eCover").files[0];
+    if(cover) fd.append("cover", cover);
+    msg.className = "form-msg"; msg.textContent = "Saving…";
+    api("/api/tapes/" + editTapeId, { method: "PATCH", json: false, body: fd }).then(function(r){
+      if(!r){ msg.className = "form-msg err"; msg.textContent = "Couldn't reach the server — check your connection and try again."; return; }
+      if(r.status !== 200 || !r.data.ok){ msg.className = "form-msg err"; msg.textContent = (r.data && r.data.error) || "Couldn't save those edits."; return; }
+      updateTapeFromServer(editTapeId, r);
+      closeDlg("editDialog");
+      toast("Saved — \u201c" + r.data.tape.title + "\u201d is updated.");
+      renderAll();
+    });
+  }
   function deleteTape(id){
     var t = findTape(id); if(!t || t.handle!==currentUser) return;
     if(!window.confirm("Delete “"+t.title+"” forever? This removes the tape, its audio and cover from the site.")) return;
@@ -2016,6 +2243,7 @@
     function mtItem(t){
       var pillCls, status, actions = '<button class="btn btn-dark small" type="button" data-preview="'+t.id+'">Preview</button>';
       actions += '<button class="btn btn-outline small" type="button" data-addtracks="'+t.id+'">Add tracks</button>';
+      actions += '<button class="btn btn-outline small" type="button" data-edit-tape="'+t.id+'">Edit</button>';
       actions += '<input type="file" accept="audio/*,.mp3,.m4a,.wav,.flac,.ogg,.aac" multiple hidden data-addtracks-input="'+t.id+'" aria-label="Choose audio tracks to add to '+esc(t.title)+'" />';
       if(t.draft){ pillCls="draft"; status="Draft · Private"; }
       else if(isScheduled(t)){ pillCls="sched"; status='Scheduled · Premieres in <span data-cd="'+t.id+'">'+countdownText(t.releaseAt-Date.now())+'</span>'; }
@@ -2036,8 +2264,10 @@
     wrap.hidden=false;
     var dl = (currentProfile.downloadIds || []).map(function(id){ return findTape(id); }).filter(Boolean);
     var up = (currentProfile.uploadIds || []).map(function(id){ return findTape(id); }).filter(Boolean);
-    var headAvatar = p.avatar ? '<img class="avatar-img" src="'+esc(p.avatar)+'" alt="'+esc(p.name)+' profile photo" />' : '<span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span>';
+    var headAvatarInner = p.avatar ? '<img class="avatar-img" src="'+esc(p.avatar)+'" alt="'+esc(p.name)+' profile photo" />' : '<span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span>';
+    var headAvatar = '<button type="button" class="avatar-edit-btn" data-edit-avatar="1" title="Tap to change your photo" aria-label="Change your profile photo">'+headAvatarInner+'<span class="avatar-edit-badge">Edit</span></button>';
     var html = '<div class="profile-head">'+headAvatar+'<div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · '+(p.type==="artist"?"Artist":"Fan")+' profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
+    html += '<p class="avatar-edit-hint">Tap your photo to change it.</p><input type="file" class="avatar-quick-input" accept="image/*" hidden aria-label="Choose a profile photo" />';
     if(p.bio) html += '<p class="profile-bio">'+esc(p.bio)+'</p>';
     html += '<div class="form-card" style="margin-top:16px"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 4px;text-transform:uppercase">Edit profile</h3>';
     html += '<p style="color:var(--muted);margin:0 0 12px;font-size:14.5px">Your photo, name, city, and bio — fans see them on your public profile.</p>';
@@ -2077,6 +2307,7 @@
     html += '<p style="color:var(--muted);margin:0 0 12px;font-size:14.5px">Delete your account for good — this removes your profile and every tape on it, and signs you out. To remove just one tape, use Delete on that tape in My Tapes instead.</p>';
     html += '<button class="btn btn-danger small" type="button" data-delete-account="1">Delete my account</button></div>';
     wrap.innerHTML = html;
+    bindAvatarEdit(wrap);
     wrap.querySelectorAll("[data-open]").forEach(function(b){
       b.addEventListener("click", function(){ openTape(b.getAttribute("data-open")); });
     });
@@ -2107,6 +2338,9 @@
         addTracks(inp.getAttribute("data-addtracks-input"), inp.files);
         inp.value = "";
       });
+    });
+    wrap.querySelectorAll("[data-edit-tape]").forEach(function(b){
+      b.addEventListener("click", function(){ openEditTape(b.getAttribute("data-edit-tape")); });
     });
     wrap.querySelectorAll("[data-delete-tape]").forEach(function(b){
       b.addEventListener("click", function(){ deleteTape(b.getAttribute("data-delete-tape")); });
@@ -2153,7 +2387,7 @@
           if(!r || r.status!==200 || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't save that photo."); return; }
           if(currentProfile && r.data.user) currentProfile.user = r.data.user;
           toast("Profile photo saved.");
-          renderAll();
+          refreshFeed().then(function(){ renderAll(); });
         });
       });
     });
@@ -2163,7 +2397,7 @@
           if(!r || r.status!==200 || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't remove that photo."); return; }
           if(currentProfile && r.data.user) currentProfile.user = r.data.user;
           toast("Profile photo removed.");
-          renderAll();
+          refreshFeed().then(function(){ renderAll(); });
         });
       });
     });
