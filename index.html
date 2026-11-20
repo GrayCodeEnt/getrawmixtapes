@@ -836,6 +836,15 @@
       <div class="form-msg" id="adMsg" role="status"></div>
     </form>
   </section>
+
+  <section id="not-found" class="page" data-page="not-found" aria-labelledby="nf-h">
+    <div class="sec-head">
+      <h2 id="nf-h">That Page <span class="accent">Doesn't Exist</span></h2>
+      <p>Nothing lives at this address — the link might be mistyped, or the page moved.</p>
+    </div>
+    <div class="empty"><h3>404 — Page not found</h3><p>Head back to the music — everything on the site is one tap away.</p></div>
+    <p style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap"><a class="btn btn-orange" href="/" data-nav="home">Back Home</a><a class="btn btn-outline" href="/tapes" data-nav="tapes">Browse Tapes</a><a class="btn btn-outline" href="/rankings" data-nav="rankings">Rankings</a></p>
+  </section>
 </main>
 
 <footer>
@@ -1249,12 +1258,13 @@
   var PAGES = ["home","tapes","singles","featured","rankings","upload","sign-in","advertise","artist","feature"];
   var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","singles":"/singles","featured":"/featured","rankings":"/rankings","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist","feature":"/feature"};
   var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/singles":"singles","/featured":"featured","/rankings":"rankings","/upload":"upload","/sign-in":"sign-in","/signin":"sign-in","/profile":"sign-in","/advertise":"advertise"};
-  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","singles":"Get Raw Mixtapes — Singles","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist"};
+  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","singles":"Get Raw Mixtapes — Singles","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist","not-found":"Get Raw Mixtapes — Page Not Found"};
   var currentPage = "home";
   var currentArtistHandle = "";
   var currentFeatureHandle = "";
   function normalizePage(name){
     if(name==="profile") return "sign-in";
+    if(name==="not-found") return "not-found";
     return PAGES.indexOf(name)>=0 ? name : "home";
   }
   function basePath(){
@@ -1273,6 +1283,7 @@
   }
   function cleanUrlFor(name){
     name = normalizePage(name);
+    if(name==="not-found") return window.location.pathname;
     var base = basePath();
     if(name==="artist" && currentArtistHandle) return base + "artist/" + currentArtistHandle.replace(/^@/,"");
     if(name==="feature" && currentFeatureHandle) return base + "feature/" + currentFeatureHandle.replace(/^@/,"");
@@ -1291,17 +1302,8 @@
     else if(last==="profile") page = "sign-in";
     else if(last==="signin") page = "sign-in";
     else if(last==="home") page = "home";
-    else page = "home";
+    else page = "not-found";
     return page;
-  }
-  // True when the current address names a real page — used on boot so a
-  // dead link renders home at "/" instead of leaving the typo in the bar.
-  function isKnownPath(){
-    var parts = (window.location.pathname||"/").split("/").filter(function(s){ return !!s; });
-    if(!parts.length) return true;
-    if(parts[0]==="artist" || parts[0]==="artists" || parts[0]==="feature") return parts.length>=2;
-    var last = parts[parts.length-1];
-    return PAGES.indexOf(last)>=0 || last==="profile" || last==="signin" || last==="home" || last.indexOf(".")>=0;
   }
   function showPage(name, updateUrl){
     name = normalizePage(name);
@@ -1813,12 +1815,18 @@
       var isOwnArtist = !!(currentUser && p.handle === currentUser);
       var headAvatarInner = p.avatar ? '<img class="avatar-img" src="'+esc(p.avatar)+'" alt="'+esc(p.name)+' profile photo" />' : '<span class="avatar">'+esc((p.name||"?").charAt(0).toUpperCase())+'</span>';
       var headAvatar = isOwnArtist ? '<button type="button" class="avatar-edit-btn" data-edit-avatar="1" title="Tap to change your photo" aria-label="Change your profile photo">'+headAvatarInner+'<span class="avatar-edit-badge">Edit</span></button>' : headAvatarInner;
+      var mapped = list.map(function(rt){ return mapTape(rt); }).filter(Boolean);
+      // The strip counts releases, not just tapes: an artist with only
+      // singles reads "2 singles", a mix reads "3 releases".
+      var tapeCount = mapped.filter(function(m){ return !isSingle(m); }).length;
+      var singleCount = mapped.filter(isSingle).length;
+      var releaseTotal = tapeCount + singleCount;
+      var releaseWord = (tapeCount && singleCount) ? "release" : (singleCount ? "single" : "tape");
       var html = '<div class="profile-head">'+headAvatar+'<div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · Artist profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
       if(isOwnArtist) html += '<p class="avatar-edit-hint">Tap your photo to change it.</p><input type="file" class="avatar-quick-input" accept="image/*" hidden aria-label="Choose a profile photo" />';
       if(p.bio) html += '<p class="profile-bio">'+esc(p.bio)+'</p>';
-      html += '<p class="artist-page-stats"><span><b>'+exactNum(totals.publishedTapes||0)+'</b> '+((totals.publishedTapes||0)===1?'tape':'tapes')+'</span><span><b>'+exactNum(totals.plays||0)+'</b> '+((totals.plays||0)===1?'play':'plays')+'</span><span><b>'+exactNum(totals.downloads||0)+'</b> '+((totals.downloads||0)===1?'download':'downloads')+'</span></p>';
+      html += '<p class="artist-page-stats"><span><b>'+exactNum(releaseTotal)+'</b> '+(releaseTotal===1?releaseWord:releaseWord+"s")+'</span><span><b>'+exactNum(totals.plays||0)+'</b> '+((totals.plays||0)===1?'play':'plays')+'</span><span><b>'+exactNum(totals.downloads||0)+'</b> '+((totals.downloads||0)===1?'download':'downloads')+'</span></p>';
       if(tag) html += '<p style="margin:12px 0 0"><a class="btn small" href="'+cashUrl(tag)+'" target="_blank" rel="noopener" style="background:#00D632;border-color:#00D632;color:#06281A">Donate — Cash App '+esc(tag)+'</a> <span style="color:var(--muted);font-size:13.5px">Donations go straight to the artist via Cash App.</span></p>';
-      var mapped = list.map(function(rt){ return mapTape(rt); }).filter(Boolean);
       mapped.forEach(function(m){ if(!findTape(m.id)){ tapes.push(m); ensureTapeStats(m); } });
       if(!mapped.length){
         html += '<div class="empty" style="margin-top:16px"><h3>No published tapes yet</h3><p>'+esc(p.name)+' has a profile but nothing live in the feed yet.</p></div>';
@@ -1972,13 +1980,16 @@
     if(currentArtistHandle){
       var strip = document.querySelector(".artist-page-stats");
       if(strip){
-        var tt = 0, tp = 0, td = 0;
+        var tt = 0, ts = 0, tp = 0, td = 0;
         tapes.forEach(function(t){
           if(!isLive(t) || normHandle(t.handle)!==currentArtistHandle) return;
-          tt++; tp += Number(t.plays||0); td += Number(t.downloads||0);
+          if(isSingle(t)) ts++; else tt++;
+          tp += Number(t.plays||0); td += Number(t.downloads||0);
         });
+        var total = tt + ts;
+        var word = (tt && ts) ? "release" : (ts ? "single" : "tape");
         var spans = strip.querySelectorAll("span");
-        if(spans[0]) spans[0].innerHTML = "<b>"+exactNum(tt)+"</b> "+(tt===1?"tape":"tapes");
+        if(spans[0]) spans[0].innerHTML = "<b>"+exactNum(total)+"</b> "+(total===1?word:word+"s");
         if(spans[1]) spans[1].innerHTML = "<b>"+exactNum(tp)+"</b> "+(tp===1?"play":"plays");
         if(spans[2]) spans[2].innerHTML = "<b>"+exactNum(td)+"</b> "+(td===1?"download":"downloads");
       }
@@ -2783,9 +2794,7 @@
   /* ---------- Boot: load the shared feed, restore my login if I have one ---------- */
   function boot(){
     renderAll();
-    var firstPage = pageFromPath();
-    if(firstPage==="home" && !isKnownPath()){ try{ history.replaceState(null,"","/"); }catch(e){} }
-    showPage(firstPage, false);
+    showPage(pageFromPath(), false);
     refreshFeed().then(function(ok){
       if(ok){ return refreshMe(); }
       loadCache();
