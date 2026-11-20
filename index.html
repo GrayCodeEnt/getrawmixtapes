@@ -1248,7 +1248,7 @@
   /* ---------- Separate-page router — clean paths, no hash (unchanged) ---------- */
   var PAGES = ["home","tapes","singles","featured","rankings","upload","sign-in","advertise","artist","feature"];
   var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","singles":"/singles","featured":"/featured","rankings":"/rankings","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist","feature":"/feature"};
-  var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/singles":"singles","/featured":"featured","/rankings":"rankings","/upload":"upload","/sign-in":"sign-in","/profile":"sign-in","/advertise":"advertise"};
+  var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/singles":"singles","/featured":"featured","/rankings":"rankings","/upload":"upload","/sign-in":"sign-in","/signin":"sign-in","/profile":"sign-in","/advertise":"advertise"};
   var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","singles":"Get Raw Mixtapes — Singles","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist"};
   var currentPage = "home";
   var currentArtistHandle = "";
@@ -1267,7 +1267,9 @@
     if(PAGES.indexOf(last)>=0 || last==="profile" || last==="home" || last.indexOf(".")>=0){
       return path.slice(0, path.length - last.length);
     }
-    return path + "/";
+    // An unknown or mistyped path must not poison later URLs — the base
+    // is the site root, never the typo.
+    return "/";
   }
   function cleanUrlFor(name){
     name = normalizePage(name);
@@ -1282,13 +1284,24 @@
     var last = parts.length ? parts[parts.length-1] : "";
     var page = null;
     if(parts.length>=2 && parts[0]==="artist" && parts[1]){ currentArtistHandle = normHandle(parts[1]); return "artist"; }
+    if(parts.length>=2 && parts[0]==="artists" && parts[1]){ currentArtistHandle = normHandle(parts[1]); return "artist"; }
     if(parts.length>=2 && parts[0]==="feature" && parts[1]){ currentFeatureHandle = normHandle(parts[1]); return "feature"; }
     if(!last || last.indexOf(".")>=0) page = "home";
     else if(PAGES.indexOf(last)>=0) page = last;
     else if(last==="profile") page = "sign-in";
+    else if(last==="signin") page = "sign-in";
     else if(last==="home") page = "home";
     else page = "home";
     return page;
+  }
+  // True when the current address names a real page — used on boot so a
+  // dead link renders home at "/" instead of leaving the typo in the bar.
+  function isKnownPath(){
+    var parts = (window.location.pathname||"/").split("/").filter(function(s){ return !!s; });
+    if(!parts.length) return true;
+    if(parts[0]==="artist" || parts[0]==="artists" || parts[0]==="feature") return parts.length>=2;
+    var last = parts[parts.length-1];
+    return PAGES.indexOf(last)>=0 || last==="profile" || last==="signin" || last==="home" || last.indexOf(".")>=0;
   }
   function showPage(name, updateUrl){
     name = normalizePage(name);
@@ -2770,7 +2783,9 @@
   /* ---------- Boot: load the shared feed, restore my login if I have one ---------- */
   function boot(){
     renderAll();
-    showPage(pageFromPath(), false);
+    var firstPage = pageFromPath();
+    if(firstPage==="home" && !isKnownPath()){ try{ history.replaceState(null,"","/"); }catch(e){} }
+    showPage(firstPage, false);
     refreshFeed().then(function(ok){
       if(ok){ return refreshMe(); }
       loadCache();
