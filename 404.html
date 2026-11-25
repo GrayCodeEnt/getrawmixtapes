@@ -191,6 +191,30 @@
   .comment-form{display:flex;flex-direction:column;gap:8px;margin-top:14px}
   .comment-form input,.comment-form textarea{padding:10px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font-size:15px;font-family:inherit}
   .comment-form textarea{min-height:72px;resize:vertical}
+  /* ---------- My Library: playlists ---------- */
+  .pl-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+  .pl-items{list-style:none;margin:10px 0 0;padding:0}
+  .pl-items li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .pl-items li:last-child{border-bottom:none}
+  .pl-item-btns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .pl-picker-list{display:flex;flex-direction:column;gap:8px;margin:0 0 14px}
+  .pl-picker-list .btn{justify-content:flex-start;text-align:left}
+  /* ---------- Trenches: the social feed ---------- */
+  .trench-post{border:1.5px solid var(--line);border-radius:14px;padding:14px;margin:0 0 14px;background:var(--paper)}
+  .trench-head{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+  .trench-head .t-who{min-width:0}
+  .trench-head .t-when{color:var(--muted);font-size:13px}
+  .trench-text{margin:0 0 10px;white-space:pre-wrap;overflow-wrap:anywhere}
+  .trench-media{margin:0 0 10px;border-radius:10px;overflow:hidden}
+  .trench-media img,.trench-media video{display:block;width:100%;max-height:520px;object-fit:contain;background:#000}
+  .trench-tape{display:flex;gap:10px;align-items:center;border:1.5px solid var(--line);border-radius:10px;padding:10px;margin:0 0 10px;cursor:pointer;background:var(--surface-2)}
+  .trench-tape img{width:56px;height:56px;object-fit:cover;border-radius:8px;flex:0 0 auto}
+  .trench-tape .tt-title{font-weight:700}
+  .trench-tape .tt-sub{color:var(--muted);font-size:13.5px}
+  .trench-shared{border-left:3px solid var(--line);padding-left:12px;margin:0 0 10px}
+  .trench-comments{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+  .share-menu-list{display:flex;flex-direction:column;gap:8px}
+  .share-menu-list .btn{justify-content:flex-start;text-align:left}
 
   .empty{background:var(--surface);border:2px dashed var(--line);border-radius:var(--radius);padding:30px 22px;text-align:center}
   .empty h3{font-family:"Anton",sans-serif;font-size:22px;margin:0 0 6px;text-transform:uppercase;letter-spacing:.5px}
@@ -451,6 +475,7 @@
       <a href="/singles" data-nav="singles">Singles</a>
       <a href="/featured" data-nav="featured">Featured</a>
       <a href="/rankings" data-nav="rankings">Rankings</a>
+      <a href="/trenches" data-nav="trenches">Trenches</a>
       <a href="/advertise" data-nav="advertise">Advertise</a>
     </nav>
     <div class="head-actions">
@@ -598,6 +623,29 @@
         <h3>No tapes in the feed yet</h3>
         <p>New tapes will show up here the moment they go live — newest at the top. This page is just the feed: every new drop lands here to stream and download free.</p>
       </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: TRENCHES ============ -->
+  <section id="trenches" class="page" data-page="trenches" aria-labelledby="trenches-h">
+    <div class="sec-head">
+      <h2 id="trenches-h">Tren<span class="accent">ches</span></h2>
+      <p>The social feed — fans with accounts post pictures and videos. Newest first.</p>
+      <span class="spacer"></span>
+      <span id="trenchesCount" style="font-weight:700"></span>
+    </div>
+    <div class="form-card" style="margin-bottom:16px">
+      <form id="trenchesComposer">
+        <textarea id="trenchesText" maxlength="500" placeholder="What's happening in the Trenches? @mention an artist to link their profile." aria-label="Write a Trenches post" style="width:100%;min-height:72px"></textarea>
+        <div class="mt-actions" style="margin-top:10px">
+          <input type="file" id="trenchesMedia" accept="image/*,video/*" aria-label="Add a photo or video" />
+          <button class="btn btn-orange small" type="submit">Post to Trenches</button>
+        </div>
+        <p class="c-sub" id="trenchesComposerHint" style="margin:10px 0 0">Posting needs an account — it takes a minute to set one up.</p>
+      </form>
+    </div>
+    <div id="trenchesList">
+      <div class="empty"><h3>Loading Trenches…</h3><p>Pulling the latest posts…</p></div>
     </div>
   </section>
 
@@ -989,15 +1037,63 @@
   <div class="dlg-head">
     <div style="min-width:0">
       <h3 id="authPromptTitle">Create an account to join in</h3>
-      <div style="color:var(--muted);font-size:14.5px">Liking and commenting are for fans with an account — it takes a minute, and any account already on the site works as-is.</div>
+      <div style="color:var(--muted);font-size:14.5px">Liking, commenting, and saving music to your library are for fans with an account — it takes a minute, and any account already on the site works as-is.</div>
     </div>
     <button class="dlg-close" id="authPromptClose" type="button" aria-label="Close">✕</button>
   </div>
   <div class="dlg-body">
-    <p style="margin:0 0 16px">Set up your free account and you can like tapes, leave comments, and save downloads.</p>
+    <p style="margin:0 0 16px">Set up your free account and you can like tapes, leave comments, save downloads, and build playlists.</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <a class="btn btn-orange" href="/sign-in" data-nav="sign-in" id="authPromptCreate">Create Account</a>
       <button type="button" class="btn btn-outline" id="authPromptLater">Not now</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="playlistPickerDlg" aria-labelledby="playlistPickerTitle">
+  <div class="dlg-head">
+    <div style="min-width:0">
+      <h3 id="playlistPickerTitle">Add to a playlist</h3>
+      <div style="color:var(--muted);font-size:14.5px" id="playlistPickerSub">Pick a playlist — or make a new one.</div>
+    </div>
+    <button class="dlg-close" id="playlistPickerClose" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="dlg-body">
+    <div class="pl-picker-list" id="playlistPickerList"></div>
+    <div class="mt-actions">
+      <input type="text" id="playlistPickerNewName" maxlength="60" placeholder="New playlist name" aria-label="New playlist name" />
+      <button type="button" class="btn btn-orange small" id="playlistPickerCreate">Create &amp; add</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="shareMenuDlg" aria-labelledby="shareMenuTitle">
+  <div class="dlg-head">
+    <div style="min-width:0">
+      <h3 id="shareMenuTitle">Share</h3>
+      <div style="color:var(--muted);font-size:14.5px" id="shareMenuSub"></div>
+    </div>
+    <button class="dlg-close" id="shareMenuClose" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="dlg-body">
+    <div class="share-menu-list" id="shareMenuList"></div>
+  </div>
+</dialog>
+
+<dialog id="shareTrenchesDlg" aria-labelledby="shareTrenchesTitle">
+  <div class="dlg-head">
+    <div style="min-width:0">
+      <h3 id="shareTrenchesTitle">Share to Trenches</h3>
+      <div style="color:var(--muted);font-size:14.5px">Add a caption if you want — or post it as-is.</div>
+    </div>
+    <button class="dlg-close" id="shareTrenchesClose" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="dlg-body">
+    <div id="shareTrenchesPreview" style="margin-bottom:12px"></div>
+    <textarea id="shareTrenchesCaption" maxlength="500" placeholder="Add a caption… (optional) @mention an artist to link their profile." aria-label="Caption for your Trenches post" style="width:100%;min-height:72px"></textarea>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <button type="button" class="btn btn-orange" id="shareTrenchesPost">Post to Trenches</button>
+      <button type="button" class="btn btn-outline" id="shareTrenchesCancel">Cancel</button>
     </div>
   </div>
 </dialog>
@@ -1034,6 +1130,13 @@
   var feedLoaded = false;    // true once the first /api/tapes fetch settles — until then show "Loading…", never "No tapes yet"
   var currentUser = null;    // handle string
   var currentProfile = null; // { user, uploadIds:[tapeId], downloadIds:[tapeId] } from /api/auth/me
+  var myPlaylists = []; // my playlists, from GET /api/playlists — server state, same on any device
+  var playlistQueue = null; // { items: [{tapeId, trackIdx}], pos } — playing a playlist, not a tape
+  var pendingPlaylistAdd = null; // { tapeId, trackIdx } waiting on the picker — "all" means the whole tape
+  var feedPosts = []; // Trenches posts, newest first, from GET /api/feed
+  var trenchesLoaded = false;
+  var pendingShareTarget = null; // {kind:"tape"|"post", id} waiting on the Share-to-Trenches composer
+  var shareMenuTarget = null; // {kind, id, title, subtitle, url} for the open share menu
   var rankMode = "global";
   var currentTapeId = null;
   var editTapeId = null;      // tape open in the Edit dialog
@@ -1321,10 +1424,10 @@
   }
 
   /* ---------- Separate-page router — clean paths, no hash (unchanged) ---------- */
-  var PAGES = ["home","tapes","singles","featured","rankings","upload","sign-in","advertise","artist","feature","tape"];
-  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","singles":"/singles","featured":"/featured","rankings":"/rankings","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist","feature":"/feature","tape":"/tape"};
-  var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/singles":"singles","/featured":"featured","/rankings":"rankings","/upload":"upload","/sign-in":"sign-in","/signin":"sign-in","/profile":"sign-in","/advertise":"advertise"};
-  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","singles":"Get Raw Mixtapes — Singles","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist","tape":"Get Raw Mixtapes — Tape","not-found":"Get Raw Mixtapes — Page Not Found"};
+  var PAGES = ["home","tapes","singles","featured","rankings","trenches","upload","sign-in","advertise","artist","feature","tape"];
+  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","singles":"/singles","featured":"/featured","rankings":"/rankings","trenches":"/trenches","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist","feature":"/feature","tape":"/tape"};
+  var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/singles":"singles","/featured":"featured","/rankings":"rankings","/trenches":"trenches","/upload":"upload","/sign-in":"sign-in","/signin":"sign-in","/profile":"sign-in","/advertise":"advertise"};
+  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","singles":"Get Raw Mixtapes — Singles","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","trenches":"Get Raw Mixtapes — Trenches","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist","tape":"Get Raw Mixtapes — Tape","not-found":"Get Raw Mixtapes — Page Not Found"};
   var currentPage = "home";
   var currentArtistHandle = "";
   var currentFeatureHandle = "";
@@ -1395,6 +1498,7 @@
     if(name==="artist") renderArtist();
     if(name==="feature") renderFeature();
     if(name==="tape") renderTapePage();
+    if(name==="trenches") loadTrenches();
   }
   document.addEventListener("click", function(ev){
     var a = ev.target.closest ? ev.target.closest('a[data-nav], a[href^="/"]') : null;
@@ -1446,9 +1550,17 @@
     var s = ev.target.closest ? ev.target.closest("[data-share]") : null;
     if(s){
       ev.preventDefault(); ev.stopPropagation();
-      var t = findTape(s.getAttribute("data-share"));
-      if(t) shareTape(t);
+      openShareMenu("tape", s.getAttribute("data-share"));
+      return;
     }
+    var sp = ev.target.closest ? ev.target.closest("[data-share-post]") : null;
+    if(sp){
+      ev.preventDefault(); ev.stopPropagation();
+      openShareMenu("post", sp.getAttribute("data-share-post"));
+      return;
+    }
+    var pv = ev.target.closest ? ev.target.closest("[data-pvote]") : null;
+    if(pv){ ev.preventDefault(); ev.stopPropagation(); voteOnPost(pv.getAttribute("data-post"), pv.getAttribute("data-pvote")); return; }
   });
   document.addEventListener("keydown", function(ev){
     if(ev.key!=="Enter" && ev.key!==" ") return;
@@ -1457,9 +1569,17 @@
     var s = ev.target.closest ? ev.target.closest("[data-share]") : null;
     if(s){
       ev.preventDefault();
-      var t = findTape(s.getAttribute("data-share"));
-      if(t) shareTape(t);
+      openShareMenu("tape", s.getAttribute("data-share"));
+      return;
     }
+    var sp = ev.target.closest ? ev.target.closest("[data-share-post]") : null;
+    if(sp){
+      ev.preventDefault();
+      openShareMenu("post", sp.getAttribute("data-share-post"));
+      return;
+    }
+    var pv = ev.target.closest ? ev.target.closest("[data-pvote]") : null;
+    if(pv){ ev.preventDefault(); voteOnPost(pv.getAttribute("data-post"), pv.getAttribute("data-pvote")); return; }
   });
   /* ---------- Rendering (same look, data now from the server) ---------- */
   function coverHTML(tape, cls){
@@ -1946,7 +2066,7 @@
     list.forEach(function(t){ grid.appendChild(tapeCard(t)); });
     wrap.innerHTML=""; wrap.appendChild(grid);
   }
-  function renderAll(){ renderTapes(); renderFeatured(); renderFeaturedArtists(); renderSoon(); renderRankings(); renderYearStats(); renderProfile(); renderNewDrops(); renderSingles(); renderSinglesPreview(); if(currentPage==="tape") renderTapePage(); }
+  function renderAll(){ renderTapes(); renderFeatured(); renderFeaturedArtists(); renderSoon(); renderRankings(); renderYearStats(); renderProfile(); renderNewDrops(); renderSingles(); renderSinglesPreview(); renderTrenches(); if(currentPage==="tape") renderTapePage(); }
 
   /* ---------- Tape page + player (audio now streams from the backend) ---------- */
   var audio = $("audioEl");
@@ -1963,13 +2083,26 @@
   function updatePlayerControls(){
     var loaded = !!(currentTape && nowPlaying);
     $("playerPlayPause").disabled = !loaded;
-    $("playerPrev").disabled = !loaded || nowPlaying.idx<=0;
-    $("playerNext").disabled = !loaded || nowPlaying.idx>=currentTape.tracks.length-1;
+    if(playlistQueue){
+      // A playlist steps song to song across tapes, not track to track
+      // inside one tape — Prev/Next follow the playlist position.
+      $("playerPrev").disabled = !loaded || playlistQueue.pos<=0;
+      $("playerNext").disabled = !loaded || playlistQueue.pos>=playlistQueue.items.length-1;
+    } else {
+      $("playerPrev").disabled = !loaded || nowPlaying.idx<=0;
+      $("playerNext").disabled = !loaded || nowPlaying.idx>=currentTape.tracks.length-1;
+    }
     $("playerPlayPause").textContent = (playerIsPlaying && loaded) ? "❚❚" : "▶";
   }
   audio.addEventListener("play", function(){ playerIsPlaying = true; updatePlayerControls(); });
   audio.addEventListener("pause", function(){ playerIsPlaying = false; updatePlayerControls(); });
   function playStep(dir){
+    if(playlistQueue){
+      var pnext = playlistQueue.pos + dir;
+      if(pnext < 0 || pnext >= playlistQueue.items.length) return;
+      playPlaylistItem(playlistQueue.items, pnext);
+      return;
+    }
     if(!currentTape || !nowPlaying) return;
     var next = nowPlaying.idx + dir;
     if(next < 0 || next >= currentTape.tracks.length) return;
@@ -2035,6 +2168,12 @@
     }
   }
   audio.addEventListener("ended", function(){
+    if(playlistQueue){
+      var pnext = playlistQueue.pos + 1;
+      if(pnext >= playlistQueue.items.length){ playlistQueue = null; playerIsPlaying = false; updatePlayerControls(); return; }
+      playPlaylistItem(playlistQueue.items, pnext);
+      return;
+    }
     if(!playQueue){ playerIsPlaying = false; updatePlayerControls(); return; }
     var next = playQueue.idx + 1;
     if(next >= playQueue.tape.tracks.length){ playQueue = null; playerIsPlaying = false; updatePlayerControls(); return; }
@@ -2137,12 +2276,20 @@
   }
   // Spans, not buttons: the row lives inside tape cards, which are
   // <button> elements themselves, and buttons cannot nest.
-  function reactRowHTML(tape){
+  // withShare=false leaves Share out — on the tape page Share comes
+  // last, after the comments section (thumbs up, thumbs down,
+  // comments, share). Feed cards keep the full row.
+  function reactRowHTML(tape, withShare){
     var up = Number(tape.up || 0), down = Number(tape.down || 0);
     var mine = myVoteFor(tape.id);
-    return '<span class="tape-react" data-react-row="'+tape.id+'">'
+    var html = '<span class="tape-react" data-react-row="'+tape.id+'">'
       + '<span class="react-btn'+(mine==="up"?" on":"")+'" role="button" tabindex="0" data-vote="up" data-tape="'+tape.id+'" aria-label="Like this tape">👍 <span data-count="up">'+up+'</span></span>'
-      + '<span class="react-btn'+(mine==="down"?" on-down":"")+'" role="button" tabindex="0" data-vote="down" data-tape="'+tape.id+'" aria-label="Dislike this tape">👎 <span data-count="down">'+down+'</span></span>'
+      + '<span class="react-btn'+(mine==="down"?" on-down":"")+'" role="button" tabindex="0" data-vote="down" data-tape="'+tape.id+'" aria-label="Dislike this tape">👎 <span data-count="down">'+down+'</span></span>';
+    if(withShare !== false) html += '<span class="share-btn" role="button" tabindex="0" data-share="'+tape.id+'">↗ Share</span>';
+    return html + '</span>';
+  }
+  function shareBtnHTML(tape){
+    return '<span class="tape-react" data-react-row="'+tape.id+'">'
       + '<span class="share-btn" role="button" tabindex="0" data-share="'+tape.id+'">↗ Share</span>'
       + '</span>';
   }
@@ -2169,16 +2316,88 @@
       if(tape){ tape.up = r.data.up; tape.down = r.data.down; paintReactRow(tape); }
     });
   }
-  function shareTape(tape){
-    var url = "https://getrawmixtapes.com/tape/" + tape.id;
-    var text = tape.title + " by " + tape.artist + " — free on Get Raw Mixtapes";
-    if(navigator.share){
-      navigator.share({ title: tape.title + " — Get Raw Mixtapes", text: text, url: url }).catch(function(){ /* user dismissed the sheet */ });
-      return;
+  // ---- Share menu --------------------------------------------------------
+  // Tapping Share anywhere opens this menu — the share sheet, with every
+  // option in one place. Share to Trenches is posting, so it needs an
+  // account; everything else stays open to everyone.
+  function shareMenuTargetFor(kind, id){
+    if(kind === "tape"){
+      var t = findTape(id); if(!t) return null;
+      return { kind: "tape", id: t.id, title: t.title, subtitle: t.title + " by " + t.artist + " — free on Get Raw Mixtapes", url: "https://getrawmixtapes.com/tape/" + t.id };
     }
-    var done = function(){ toast("Link copied — send it anywhere."); };
-    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(done, function(){ toast(url); }); }
-    else { toast(url); }
+    var p = feedPosts.filter(function(x){ return x.id === id; })[0]; if(!p) return null;
+    var label = p.text ? p.text.slice(0, 80) : (p.kind === "tape" && p.tape ? p.tape.title + " by " + p.tape.artist : "A post on Get Raw Mixtapes");
+    return { kind: "post", id: p.id, title: label, subtitle: label + " — on Get Raw Mixtapes", url: "https://getrawmixtapes.com/trenches#" + p.id };
+  }
+  function openShareMenu(kind, id){
+    var target = shareMenuTargetFor(kind, id);
+    if(!target) return;
+    shareMenuTarget = target;
+    $("shareMenuSub").textContent = target.title;
+    var list = $("shareMenuList");
+    list.innerHTML = "";
+    function row(label, handler){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "btn btn-outline";
+      b.textContent = label;
+      b.addEventListener("click", handler);
+      list.appendChild(b);
+      return b;
+    }
+    function linkRow(label, href){
+      var a = document.createElement("a");
+      a.className = "btn btn-outline"; a.href = href; a.target = "_blank"; a.rel = "noopener";
+      a.textContent = label;
+      a.addEventListener("click", function(){ closeDlg("shareMenuDlg"); });
+      list.appendChild(a);
+      return a;
+    }
+    // Share to Trenches first — its own slot at the top of the menu.
+    row("↗ Share to Trenches", function(){ closeDlg("shareMenuDlg"); openShareTrenches(target); });
+    row("🔗 Copy Link", function(){
+      closeDlg("shareMenuDlg");
+      var done = function(){ toast("Link copied — send it anywhere."); };
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(target.url).then(done, function(){ toast(target.url); }); }
+      else { toast(target.url); }
+    });
+    var encUrl = encodeURIComponent(target.url);
+    var encText = encodeURIComponent(target.subtitle);
+    linkRow("✉️ Email", "mailto:?subject=" + encodeURIComponent(target.title + " — Get Raw Mixtapes") + "&body=" + encText + "%0A%0A" + encUrl);
+    linkRow("𝕏 Post on X", "https://twitter.com/intent/tweet?text=" + encText + "&url=" + encUrl);
+    linkRow("Facebook", "https://www.facebook.com/sharer/sharer.php?u=" + encUrl);
+    linkRow("WhatsApp", "https://wa.me/?text=" + encText + "%20" + encUrl);
+    if(navigator.share){
+      row("📱 More options…", function(){
+        closeDlg("shareMenuDlg");
+        navigator.share({ title: target.title + " — Get Raw Mixtapes", text: target.subtitle, url: target.url }).catch(function(){ /* user dismissed the sheet */ });
+      });
+    }
+    var d = $("shareMenuDlg"); if(!d) return;
+    if(typeof d.showModal === "function"){ try{ d.showModal(); return; }catch(e){} }
+    d.setAttribute("open", "");
+  }
+  // Share to Trenches composer: shows the tape/post being shared, with
+  // an optional caption (@mentions link to profiles, like in comments).
+  // The caption shows on the Trenches post above the shared tape/post.
+  function openShareTrenches(target){
+    if(!currentUser){ showAuthPrompt(); return; }
+    pendingShareTarget = target;
+    var prev = $("shareTrenchesPreview");
+    if(target.kind === "tape"){
+      var t = findTape(target.id);
+      prev.innerHTML = t
+        ? '<div class="trench-tape" style="margin:0">' + (t.cover ? '<img src="'+esc(t.cover)+'" alt="" />' : '') + '<div style="min-width:0"><div class="tt-title">'+esc(t.title)+'</div><div class="tt-sub">'+esc(t.artist)+'</div></div></div>'
+        : '<p class="c-sub">That tape isn\'t here anymore.</p>';
+    } else {
+      var p = feedPosts.filter(function(x){ return x.id === target.id; })[0];
+      prev.innerHTML = p
+        ? '<div class="trench-shared" style="margin:0"><div style="font-weight:700;margin-bottom:4px">'+esc(p.author)+'</div>' + (p.text ? '<p class="trench-text">'+renderCommentText(p.text)+'</p>' : '') + (p.mediaUrl ? '<div class="trench-media">' + (p.mediaType === "video" ? '<video src="'+esc(p.mediaUrl)+'" controls preload="metadata" playsinline></video>' : '<img src="'+esc(p.mediaUrl)+'" alt="" loading="lazy" />') + '</div>' : '') + '</div>'
+        : '<p class="c-sub">That post isn\'t here anymore.</p>';
+    }
+    $("shareTrenchesCaption").value = "";
+    var d = $("shareTrenchesDlg"); if(!d) return;
+    if(typeof d.showModal === "function"){ try{ d.showModal(); return; }catch(e){} }
+    d.setAttribute("open", "");
   }
   // @mentions: @handle becomes a link to that artist's profile — the
   // site's own [data-artist] handler opens it, same as every @name
@@ -2205,6 +2424,243 @@
       if(!r || !r.data || !r.data.ok){ list2.innerHTML = '<p class="c-sub">Couldn\'t load comments right now.</p>'; return; }
       var cs = r.data.comments || [];
       var t = findTape(id); if(t) t.commentCount = cs.length;
+      list2.innerHTML = cs.length ? cs.map(commentHTML).join("") : '<p class="c-sub">No comments yet — be the first to say something.</p>';
+    });
+  }
+  // ---- My Library: playlists -------------------------------------------
+  // Server-side per account, so a playlist made on one phone is there
+  // after signing in anywhere else. Saving needs an account — guests
+  // get the create-account popup, same as liking and commenting.
+  function loadPlaylists(){
+    if(!getToken()){ myPlaylists = []; return Promise.resolve([]); }
+    return api("/api/playlists").then(function(r){
+      if(r && r.status === 401){ myPlaylists = []; return myPlaylists; }
+      if(r && r.data && r.data.ok){ myPlaylists = r.data.playlists || []; }
+      return myPlaylists;
+    });
+  }
+  function openPlaylistPicker(tapeId, trackIdx){
+    if(!currentUser){ showAuthPrompt(); return; }
+    pendingPlaylistAdd = { tapeId: tapeId, trackIdx: trackIdx };
+    var tape = findTape(tapeId);
+    $("playlistPickerSub").textContent = tape
+      ? (trackIdx === "all" ? "Adding the whole tape “" + tape.title + "”." : "Adding “" + (tape.tracks[trackIdx] ? tape.tracks[trackIdx].title : "") + "” from “" + tape.title + "”.")
+      : "Pick a playlist — or make a new one.";
+    loadPlaylists().then(function(){
+      var list = $("playlistPickerList");
+      if(!list) return;
+      if(!myPlaylists.length){
+        list.innerHTML = '<p class="c-sub" style="margin:0">No playlists yet — make your first one below.</p>';
+      } else {
+        list.innerHTML = "";
+        myPlaylists.forEach(function(pl){
+          var b = document.createElement("button");
+          b.type = "button"; b.className = "btn btn-outline";
+          b.textContent = pl.name + " (" + pl.items.length + (pl.items.length === 1 ? " song)" : " songs)");
+          b.addEventListener("click", function(){ addPendingToPlaylist(pl.id); });
+          list.appendChild(b);
+        });
+      }
+      var d = $("playlistPickerDlg"); if(!d) return;
+      if(typeof d.showModal === "function"){ try{ d.showModal(); return; }catch(e){} }
+      d.setAttribute("open", "");
+    });
+  }
+  function addPendingToPlaylist(plId){
+    if(!pendingPlaylistAdd) return;
+    var body = { tapeId: pendingPlaylistAdd.tapeId };
+    if(pendingPlaylistAdd.trackIdx !== "all") body.trackIdx = pendingPlaylistAdd.trackIdx;
+    api("/api/playlists/" + encodeURIComponent(plId) + "/items", { method: "POST", body: JSON.stringify(body) }).then(function(r){
+      if(r && r.status === 401){ closeDlg("playlistPickerDlg"); showAuthPrompt(); return; }
+      if(!r || !r.data || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't add that to the playlist."); return; }
+      var pl = r.data.playlist;
+      var i = myPlaylists.findIndex(function(p){ return p.id === plId; });
+      if(i >= 0) myPlaylists[i] = pl; else myPlaylists.push(pl);
+      closeDlg("playlistPickerDlg");
+      toast(r.data.added ? (r.data.added === 1 ? "Added to “" + pl.name + "”." : "Added " + r.data.added + " songs to “" + pl.name + "”.") : "Already in “" + pl.name + "”.");
+      pendingPlaylistAdd = null;
+      renderAll();
+    });
+  }
+  // Play one song from a playlist — the queue is the playlist, so Prev /
+  // Next and the end of the track step through the playlist, not the tape.
+  function playPlaylistItem(items, pos){
+    if(!items || !items.length || pos < 0 || pos >= items.length) return;
+    var it = items[pos];
+    var tape = findTape(it.tapeId);
+    if(!tape || !tape.tracks || !tape.tracks[it.trackIdx]){ toast("That song isn't available anymore."); return; }
+    playlistQueue = { items: items, pos: pos };
+    playQueue = null;
+    playTrack(tape, tape.tracks[it.trackIdx], it.trackIdx);
+    updatePlayerControls();
+  }
+  function movePlaylistItem(btn, dir){
+    var plId = btn.getAttribute(dir < 0 ? "data-pl-up" : "data-pl-down");
+    var from = Number(btn.getAttribute("data-idx"));
+    api("/api/playlists/" + encodeURIComponent(plId) + "/move", { method: "POST", body: JSON.stringify({ from: from, to: from + dir }) }).then(function(r){
+      if(!r || !r.data || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't move that song."); return; }
+      var i = myPlaylists.findIndex(function(p){ return p.id === plId; });
+      if(i >= 0) myPlaylists[i] = r.data.playlist;
+      renderAll();
+    });
+  }
+  // ---- Trenches: the social feed -----------------------------------------
+  // Same options as the music pages, same order: thumbs up, thumbs down,
+  // comments, share. Posting, liking, and commenting need an account;
+  // share stays open. Guests can read the feed.
+  function loadTrenches(){
+    return api("/api/feed").then(function(r){
+      trenchesLoaded = true;
+      if(r && r.data && r.data.ok){ feedPosts = r.data.posts || []; }
+      renderTrenches();
+      return feedPosts;
+    });
+  }
+  function myPostVoteFor(id){
+    try{ return window.localStorage.getItem("getraw_post_vote_" + id) || "none"; }catch(e){ return "none"; }
+  }
+  function setMyPostVote(id, vote){
+    try{
+      if(vote === "none") window.localStorage.removeItem("getraw_post_vote_" + id);
+      else window.localStorage.setItem("getraw_post_vote_" + id, vote);
+    }catch(e){}
+  }
+  function postVoteRowHTML(p){
+    var up = Number(p.up || 0), down = Number(p.down || 0);
+    var mine = myPostVoteFor(p.id);
+    return '<span class="tape-react" data-post-react-row="'+p.id+'">'
+      + '<span class="react-btn'+(mine==="up"?" on":"")+'" role="button" tabindex="0" data-pvote="up" data-post="'+p.id+'" aria-label="Like this post">👍 <span data-count="up">'+up+'</span></span>'
+      + '<span class="react-btn'+(mine==="down"?" on-down":"")+'" role="button" tabindex="0" data-pvote="down" data-post="'+p.id+'" aria-label="Dislike this post">👎 <span data-count="down">'+down+'</span></span>'
+      + '</span>';
+  }
+  function paintPostRow(p){
+    document.querySelectorAll('[data-post-react-row="'+p.id+'"]').forEach(function(row){
+      var up = row.querySelector('[data-count="up"]'); if(up) up.textContent = Number(p.up || 0);
+      var down = row.querySelector('[data-count="down"]'); if(down) down.textContent = Number(p.down || 0);
+      var mine = myPostVoteFor(p.id);
+      row.querySelectorAll("[data-pvote]").forEach(function(b){
+        b.classList.toggle("on", b.getAttribute("data-pvote") === "up" && mine === "up");
+        b.classList.toggle("on-down", b.getAttribute("data-pvote") === "down" && mine === "down");
+      });
+    });
+    document.querySelectorAll('[data-post-comments-count="'+p.id+'"]').forEach(function(el){
+      el.textContent = "💬 Comments (" + Number(p.commentCount || 0) + ")";
+    });
+  }
+  function voteOnPost(id, vote){
+    if(!currentUser){ showAuthPrompt(); return Promise.resolve(); }
+    var mine = myPostVoteFor(id);
+    var next = (mine === vote) ? "none" : vote; // tapping your vote again takes it back
+    return api("/api/feed/" + encodeURIComponent(id) + "/react", { method: "POST", body: JSON.stringify({ vote: next }) }).then(function(r){
+      if(r && r.status === 401){ showAuthPrompt(); return; }
+      if(!r || !r.data || !r.data.ok) { toast("Couldn't save that vote — try again."); return; }
+      setMyPostVote(id, r.data.myVote || "none");
+      var p = feedPosts.filter(function(x){ return x.id === id; })[0];
+      if(p){ p.up = r.data.up; p.down = r.data.down; paintPostRow(p); }
+    });
+  }
+  function trenchPostHTML(p){
+    var when = p.createdAt ? new Date(p.createdAt).toLocaleString() : "";
+    var who = '<a class="artist-link" data-artist="'+esc(p.author)+'" style="font-weight:700">'+esc(p.author)+'</a>';
+    var avatar = p.authorAvatar ? '<img class="artist-avatar" src="'+esc(p.authorAvatar)+'" alt="" />' : '<span class="artist-avatar artist-avatar-fallback">'+esc((p.author || "?").replace(/^@/,"").charAt(0).toUpperCase())+'</span>';
+    var html = '<article class="trench-post" data-post="'+p.id+'">'
+      + '<div class="trench-head">'+avatar+'<div class="t-who">'+who+'<div class="t-when">'+esc(when)+'</div></div></div>';
+    if(p.text) html += '<p class="trench-text">'+renderCommentText(p.text)+'</p>';
+    if(p.mediaUrl){
+      html += '<div class="trench-media">' + (p.mediaType === "video"
+        ? '<video src="'+esc(p.mediaUrl)+'" controls preload="metadata" playsinline></video>'
+        : '<img src="'+esc(p.mediaUrl)+'" alt="Photo posted by '+esc(p.author)+'" loading="lazy" />') + '</div>';
+    }
+    if(p.kind === "tape" && p.tape){
+      html += '<div class="trench-tape" data-open-tape="'+esc(p.tape.id)+'" role="link" tabindex="0">'
+        + (p.tape.cover ? '<img src="'+esc(p.tape.cover)+'" alt="" />' : '')
+        + '<div style="min-width:0"><div class="tt-title">'+esc(p.tape.title)+'</div><div class="tt-sub">'+esc(p.tape.artist)+' · Tap to open the tape</div></div></div>';
+    } else if(p.kind === "tape"){
+      html += '<p class="c-sub">This tape isn\'t available anymore.</p>';
+    }
+    if(p.kind === "post" && p.sharedPost){
+      var s = p.sharedPost;
+      html += '<div class="trench-shared"><div style="font-weight:700;margin-bottom:4px">'+esc(s.author)+'</div>'
+        + (s.text ? '<p class="trench-text">'+renderCommentText(s.text)+'</p>' : '')
+        + (s.mediaUrl ? '<div class="trench-media">' + (s.mediaType === "video" ? '<video src="'+esc(s.mediaUrl)+'" controls preload="metadata" playsinline></video>' : '<img src="'+esc(s.mediaUrl)+'" alt="" loading="lazy" />') + '</div>' : '')
+        + (s.kind === "tape" && s.tape ? '<div class="trench-tape" data-open-tape="'+esc(s.tape.id)+'" role="link" tabindex="0"><div style="min-width:0"><div class="tt-title">'+esc(s.tape.title)+'</div><div class="tt-sub">'+esc(s.tape.artist)+'</div></div></div>' : '')
+        + '</div>';
+    } else if(p.kind === "post"){
+      html += '<p class="c-sub">The shared post isn\'t here anymore.</p>';
+    }
+    // Same options as the music pages, same order: thumbs up, thumbs
+    // down, comments, share.
+    html += postVoteRowHTML(p);
+    html += '<div style="margin-top:10px"><button class="btn btn-outline small" type="button" data-post-comments-toggle="'+p.id+'" data-post-comments-count="'+p.id+'">💬 Comments ('+Number(p.commentCount||0)+')</button></div>';
+    html += '<div class="trench-comments" id="postComments-'+p.id+'" hidden><div id="postCommentList-'+p.id+'"><p class="c-sub">Loading comments…</p></div>'
+      + '<form class="comment-form" data-post-comment-form="'+p.id+'">'
+      + (currentUser
+          ? '<p class="c-sub">Posting as <strong>' + esc(currentUser) + '</strong></p>'
+          : '<p class="c-sub">You need an account to comment — <a href="/sign-in" data-nav="sign-in" class="artist-link">create one or sign in</a>.</p>')
+      + '<textarea maxlength="500" placeholder="Write a comment…" required aria-label="Write a comment"></textarea>'
+      + '<div><button class="btn btn-orange small" type="submit">Post Comment</button></div></form></div>';
+    html += '<div style="margin-top:10px"><span class="tape-react"><span class="share-btn" role="button" tabindex="0" data-share-post="'+p.id+'">↗ Share</span></span></div>';
+    return html + '</article>';
+  }
+  function renderTrenches(){
+    var wrap = $("trenchesList"); if(!wrap) return;
+    var hint = $("trenchesComposerHint");
+    if(hint){
+      hint.innerHTML = currentUser
+        ? 'Posting as <strong>' + esc(currentUser) + '</strong>'
+        : 'You need an account to post — <a href="/sign-in" data-nav="sign-in" class="artist-link">create one or sign in</a>.';
+    }
+    var count = $("trenchesCount");
+    if(count) count.textContent = feedPosts.length ? feedPosts.length + (feedPosts.length === 1 ? " post" : " posts") : "";
+    if(!trenchesLoaded){
+      wrap.innerHTML = '<div class="empty"><h3>Loading Trenches…</h3><p>Pulling the latest posts…</p></div>';
+      return;
+    }
+    if(!feedPosts.length){
+      wrap.innerHTML = '<div class="empty"><h3>Nothing in the Trenches yet</h3><p>Be the first to post — a picture, a video, or just what\'s on your mind.</p></div>';
+      return;
+    }
+    wrap.innerHTML = feedPosts.map(trenchPostHTML).join("");
+    wrap.querySelectorAll("[data-post-comments-toggle]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var id = b.getAttribute("data-post-comments-toggle");
+        var box = $("postComments-" + id);
+        if(!box) return;
+        var opening = box.hidden;
+        box.hidden = !opening;
+        if(opening) loadPostComments(id);
+      });
+    });
+    wrap.querySelectorAll("[data-post-comment-form]").forEach(function(f){
+      f.addEventListener("submit", function(ev){
+        ev.preventDefault();
+        var id = f.getAttribute("data-post-comment-form");
+        if(!currentUser){ showAuthPrompt(); return; }
+        var ta = f.querySelector("textarea");
+        var text = ta.value.trim();
+        if(!text) return;
+        api("/api/feed/" + encodeURIComponent(id) + "/comments", { method: "POST", body: JSON.stringify({ text: text }) }).then(function(r){
+          if(r && r.status === 401){ showAuthPrompt(); return; }
+          if(!r || !r.data || !r.data.ok){ toast(r && r.data && r.data.error ? r.data.error : "Couldn't post that comment — try again."); return; }
+          ta.value = "";
+          loadPostComments(id);
+        });
+      });
+    });
+    wrap.querySelectorAll("[data-open-tape]").forEach(function(el){
+      function open(){ openTapePage(el.getAttribute("data-open-tape")); }
+      el.addEventListener("click", open);
+      el.addEventListener("keydown", function(ev){ if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); open(); } });
+    });
+  }
+  function loadPostComments(id){
+    var list = $("postCommentList-" + id); if(!list) return;
+    api("/api/feed/" + encodeURIComponent(id) + "/comments").then(function(r){
+      var list2 = $("postCommentList-" + id); if(!list2) return;
+      if(!r || !r.data || !r.data.ok){ list2.innerHTML = '<p class="c-sub">Couldn\'t load comments right now.</p>'; return; }
+      var cs = r.data.comments || [];
+      var p = feedPosts.filter(function(x){ return x.id === id; })[0];
+      if(p){ p.commentCount = cs.length; paintPostRow(p); }
       list2.innerHTML = cs.length ? cs.map(commentHTML).join("") : '<p class="c-sub">No comments yet — be the first to say something.</p>';
     });
   }
@@ -2253,6 +2709,7 @@
       + '<div class="tape-page-actions">'
       + '<button class="btn btn-orange" id="tapePagePlayAll" type="button"'+(live?"":" disabled")+'>▶ Play All</button>'
       + (isLive(tape) ? '<button class="btn btn-outline" id="tapePageDownloadAll" type="button">⬇ Download All</button>' : '')
+      + (isLive(tape) ? '<button class="btn btn-outline" id="tapePageAddPlaylist" type="button">＋ Add to playlist</button>' : '')
       + '</div></div></div>';
     if(tape.desc) html += '<p style="color:var(--muted);margin:16px 0 0">'+esc(tape.desc)+'</p>';
     if(!isLive(tape) && preview) html += '<p class="countdown" style="margin:14px 0 0">Private preview — only you can see this tape. It is not in the feed and fans cannot see it.</p>';
@@ -2267,23 +2724,30 @@
       var li = document.createElement("li"); li.className="inline-track"; li.setAttribute("data-tape", tape.id); li.setAttribute("data-idx", String(idx));
       li.innerHTML = '<span class="tn">'+(idx+1)+'</span><span class="tt">'+esc(track.title)+'</span>';
       var pb = document.createElement("button"); pb.type="button"; pb.className="icon-btn inline-play"; pb.textContent="▶ Play"; pb.disabled=!live;
-      pb.addEventListener("click", function(){ playQueue = null; playTrack(tape, track, idx); });
+      pb.addEventListener("click", function(){ playQueue = null; playlistQueue = null; playTrack(tape, track, idx); });
       var dl = document.createElement("button"); dl.type="button"; dl.className="icon-btn dl"; dl.textContent="⬇ Free"; dl.disabled=!live;
       dl.addEventListener("click", function(){ downloadTrack(tape, track); });
-      li.appendChild(pb); li.appendChild(dl); ol.appendChild(li);
+      var ab = document.createElement("button"); ab.type="button"; ab.className="icon-btn"; ab.textContent="＋"; ab.title="Add to playlist"; ab.setAttribute("aria-label", "Add "+track.title+" to a playlist"); ab.setAttribute("data-add-to-playlist", tape.id+":"+idx); ab.disabled=!live;
+      ab.addEventListener("click", function(){ openPlaylistPicker(tape.id, idx); });
+      li.appendChild(pb); li.appendChild(dl); li.appendChild(ab); ol.appendChild(li);
     });
     wrap.appendChild(ol);
     var pa = $("tapePagePlayAll");
     if(pa) pa.addEventListener("click", function(){
       if(!tape.tracks.length) return;
+      playlistQueue = null;
       playQueue = { tape: tape, idx: 0 };
       playTrack(tape, tape.tracks[0], 0);
     });
     var da = $("tapePageDownloadAll");
     if(da) da.addEventListener("click", function(){ downloadAll(tape); });
-    // Reactions + share + comments — the fan options, on the tape page.
+    var ap = $("tapePageAddPlaylist");
+    if(ap) ap.addEventListener("click", function(){ openPlaylistPicker(tape.id, "all"); });
+    // Fan options, in this order on the tape page: thumbs up, thumbs
+    // down, comments, then Share last. (Feed cards keep up/down/share
+    // together — no comments section on a card.)
     var reactWrap = document.createElement("div");
-    reactWrap.innerHTML = reactRowHTML(tape);
+    reactWrap.innerHTML = reactRowHTML(tape, false);
     wrap.appendChild(reactWrap);
     var cSec = document.createElement("section");
     cSec.className = "comments";
@@ -2296,6 +2760,9 @@
       + '<textarea id="commentText" maxlength="500" placeholder="Write a comment…" required></textarea>'
       + '<div><button class="btn btn-orange small" type="submit">Post Comment</button></div></form>';
     wrap.appendChild(cSec);
+    var shareWrap = document.createElement("div");
+    shareWrap.innerHTML = shareBtnHTML(tape);
+    wrap.appendChild(shareWrap);
     loadComments(tape.id);
     var cf = $("commentForm");
     if(cf) cf.addEventListener("submit", function(ev){
@@ -2327,8 +2794,60 @@
   $("authPromptClose").addEventListener("click", function(){ closeDlg("authPromptDlg"); });
   $("authPromptLater").addEventListener("click", function(){ closeDlg("authPromptDlg"); });
   $("authPromptCreate").addEventListener("click", function(){ closeDlg("authPromptDlg"); });
+  $("playlistPickerClose").addEventListener("click", function(){ closeDlg("playlistPickerDlg"); });
+  $("shareMenuClose").addEventListener("click", function(){ closeDlg("shareMenuDlg"); });
+  $("shareTrenchesClose").addEventListener("click", function(){ closeDlg("shareTrenchesDlg"); });
+  $("shareTrenchesCancel").addEventListener("click", function(){ closeDlg("shareTrenchesDlg"); });
+  $("shareTrenchesPost").addEventListener("click", function(){
+    if(!pendingShareTarget){ closeDlg("shareTrenchesDlg"); return; }
+    if(!currentUser){ closeDlg("shareTrenchesDlg"); showAuthPrompt(); return; }
+    var caption = $("shareTrenchesCaption").value.trim();
+    var body = { caption: caption };
+    if(pendingShareTarget.kind === "tape") body.tapeId = pendingShareTarget.id;
+    else body.postId = pendingShareTarget.id;
+    api("/api/feed/share", { method: "POST", body: JSON.stringify(body) }).then(function(r){
+      if(r && r.status === 401){ closeDlg("shareTrenchesDlg"); showAuthPrompt(); return; }
+      if(!r || !r.data || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't share that to Trenches."); return; }
+      pendingShareTarget = null;
+      closeDlg("shareTrenchesDlg");
+      toast("Shared to Trenches.");
+      loadTrenches();
+    });
+  });
+  $("trenchesComposer").addEventListener("submit", function(ev){
+    ev.preventDefault();
+    if(!currentUser){ showAuthPrompt(); return; }
+    var text = $("trenchesText").value.trim();
+    var fileInput = $("trenchesMedia");
+    var file = fileInput && fileInput.files ? fileInput.files[0] : null;
+    if(!text && !file){ toast("Write something or add a photo or video first."); return; }
+    var fd = new FormData();
+    fd.append("text", text);
+    if(file) fd.append("media", file, file.name);
+    api("/api/feed", { method: "POST", json: false, body: fd }).then(function(r){
+      if(r && r.status === 401){ showAuthPrompt(); return; }
+      if(!r || !r.data || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't post that — try again."); return; }
+      $("trenchesText").value = "";
+      if(fileInput) fileInput.value = "";
+      toast("Posted to Trenches.");
+      loadTrenches();
+    });
+  });
+  $("playlistPickerCreate").addEventListener("click", function(){
+    var inp = $("playlistPickerNewName");
+    var name = inp ? inp.value.trim() : "";
+    if(!name){ toast("Give the new playlist a name first."); return; }
+    if(!pendingPlaylistAdd){ closeDlg("playlistPickerDlg"); return; }
+    api("/api/playlists", { method: "POST", body: JSON.stringify({ name: name }) }).then(function(r){
+      if(r && r.status === 401){ closeDlg("playlistPickerDlg"); showAuthPrompt(); return; }
+      if(!r || !r.data || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't create that playlist."); return; }
+      myPlaylists.push(r.data.playlist);
+      if(inp) inp.value = "";
+      addPendingToPlaylist(r.data.playlist.id);
+    });
+  });
   $("eSave").addEventListener("click", function(){ saveEditTape(); });
-  $("playerClose").addEventListener("click", function(){ audio.pause(); audio.removeAttribute("src"); audio.load(); $("audioEl").style.display = "none"; playQueue = null; nowPlaying = null; currentTape = null; playerIsPlaying = false; $("nowTitle").textContent = "Pick a song to play"; $("nowSub").textContent = "Free mixtapes and singles — tap ▶ on any song"; var nc = $("nowCover"); nc.removeAttribute("src"); nc.alt = ""; nc.style.display = "none"; updateInlineNowPlaying(); updatePlayerControls(); });
+  $("playerClose").addEventListener("click", function(){ audio.pause(); audio.removeAttribute("src"); audio.load(); $("audioEl").style.display = "none"; playQueue = null; playlistQueue = null; nowPlaying = null; currentTape = null; playerIsPlaying = false; $("nowTitle").textContent = "Pick a song to play"; $("nowSub").textContent = "Free mixtapes and singles — tap ▶ on any song"; var nc = $("nowCover"); nc.removeAttribute("src"); nc.alt = ""; nc.style.display = "none"; updateInlineNowPlaying(); updatePlayerControls(); });
 
   /* ---------- Upload (files go to the server; the upload creates the artist profile) ---------- */
   var trackFiles = [];
@@ -2549,10 +3068,10 @@
   /* ---------- Profiles / auth (server accounts — log in anywhere) ---------- */
   function showMsg(id, ok, text){ var m=$(id); m.className="form-msg "+(ok?"ok":"err"); m.textContent=text; }
   function refreshMe(){
-    if(!getToken()){ currentUser = null; currentProfile = null; return Promise.resolve(null); }
+    if(!getToken()){ currentUser = null; currentProfile = null; myPlaylists = []; playlistQueue = null; return Promise.resolve(null); }
     return api("/api/auth/me").then(function(r){
       if(!r || r.status !== 200 || !r.data || !r.data.ok){
-        if(r && r.status === 401){ setToken(""); currentUser = null; currentProfile = null; }
+        if(r && r.status === 401){ setToken(""); currentUser = null; currentProfile = null; myPlaylists = []; playlistQueue = null; }
         return null;
       }
       currentUser = r.data.user.handle;
@@ -2570,7 +3089,7 @@
       });
       tapes = Object.keys(byId).map(function(k){ return byId[k]; });
       if(currentProfile.user.city && !$("localCity").value) $("localCity").value = currentProfile.user.city;
-      return r.data;
+      return loadPlaylists().then(function(){ return r.data; });
     });
   }
   function refreshFeed(){
@@ -2630,7 +3149,7 @@
   });
   $("signOutBtn").addEventListener("click", function(){
     api("/api/auth/logout", { method:"POST", body: "{}" });
-    setToken(""); currentUser=null; currentProfile=null;
+    setToken(""); currentUser=null; currentProfile=null; myPlaylists=[]; playlistQueue=null;
     refreshFeed().then(function(){ renderAll(); });
     toast("Signed out.");
   });
@@ -2791,6 +3310,22 @@
       refreshFeed().then(function(){ showPage("home", true); renderAll(); });
     });
   }
+  // My Library — Playlists, from server state (myPlaylists). Each
+  // playlist shows its songs with play, move up/down, and remove, plus
+  // Play All, Rename, and Delete for the list itself.
+  function playlistLibraryHTML(){
+    if(!myPlaylists.length) return '<p style="color:var(--muted);margin:0">No playlists yet — make one above, then add songs from any tape page with the ＋ button.</p>';
+    return myPlaylists.map(function(pl){
+      var h = '<div class="pl-block" style="border-top:1px solid var(--line);padding-top:12px;margin-top:12px"><div class="pl-head"><span><strong>'+esc(pl.name)+'</strong> · '+pl.items.length+(pl.items.length===1?" song":" songs")+'</span><span class="pl-item-btns"><button class="btn btn-orange small" type="button" data-pl-playall="'+pl.id+'">▶ Play All</button><button class="btn btn-outline small" type="button" data-pl-rename="'+pl.id+'">Rename</button><button class="btn btn-danger small" type="button" data-pl-delete="'+pl.id+'">Delete</button></span></div>';
+      if(!pl.items.length) h += '<p style="color:var(--muted);margin:8px 0 0;font-size:14.5px">Empty — add songs from any tape page with the ＋ button.</p>';
+      else {
+        h += '<ul class="pl-items">' + pl.items.map(function(it, i){
+          return '<li><span><strong>'+esc(it.trackTitle)+'</strong> — '+esc(it.tapeTitle)+' · '+esc(it.artist)+'</span><span class="pl-item-btns"><button class="btn btn-dark small" type="button" data-pl-play="'+pl.id+'" data-idx="'+i+'">▶ Play</button><button class="btn btn-outline small" type="button" data-pl-up="'+pl.id+'" data-idx="'+i+'"'+(i===0?" disabled":"")+'>↑</button><button class="btn btn-outline small" type="button" data-pl-down="'+pl.id+'" data-idx="'+i+'"'+(i===pl.items.length-1?" disabled":"")+'>↓</button><button class="btn btn-outline small" type="button" data-pl-remove="'+pl.id+'" data-idx="'+i+'">✕</button></span></li>';
+        }).join("") + '</ul>';
+      }
+      return h + '</div>';
+    }).join("");
+  }
   function renderProfile(){
     var chip = $("userChip"), link = $("signInLink");
     var p = currentProfile ? currentProfile.user : null;
@@ -2844,6 +3379,10 @@
       html += '<ul class="mini-list">'+dl.map(function(t){ return '<li><span><strong>'+esc(t.title)+'</strong> — '+esc(t.artist)+'</span><button class="btn btn-dark small" type="button" data-open="'+t.id+'">Open tape</button></li>'; }).join("")+'</ul>';
     }
     html += '</div>';
+    html += '<div class="form-card" style="margin-top:16px"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 4px;text-transform:uppercase">My Library — Playlists</h3>';
+    html += '<p style="color:var(--muted);margin:0 0 12px;font-size:14.5px">Your saved music, your way — make a playlist, add any song from any tape, and play it straight through.</p>';
+    html += '<div class="mt-actions" style="margin-bottom:12px"><input type="text" id="newPlaylistName" maxlength="60" placeholder="New playlist name" aria-label="New playlist name" /><button class="btn btn-orange small" type="button" data-create-playlist="1">Create playlist</button></div>';
+    html += '<div id="playlistList">' + playlistLibraryHTML() + '</div></div>';
     if(p.type==="artist"){
       var tag = normCashtag(p.cashtag);
       html += '<div class="form-card" style="margin-top:16px"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 8px;text-transform:uppercase">Cash App donations</h3>';
@@ -2992,6 +3531,94 @@
         });
       });
     });
+    // My Library — Playlists.
+    wrap.querySelectorAll("[data-create-playlist]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var inp = $("newPlaylistName");
+        var name = inp ? inp.value.trim() : "";
+        if(!name){ toast("Give the playlist a name first."); return; }
+        api("/api/playlists", { method: "POST", body: JSON.stringify({ name: name }) }).then(function(r){
+          if(r && r.status === 401){ showAuthPrompt(); return; }
+          if(!r || !r.data || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't create that playlist."); return; }
+          myPlaylists.push(r.data.playlist);
+          toast("Playlist “" + r.data.playlist.name + "” created.");
+          renderAll();
+        });
+      });
+    });
+    wrap.querySelectorAll("[data-pl-playall]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var pl = myPlaylists.filter(function(p){ return p.id === b.getAttribute("data-pl-playall"); })[0];
+        if(pl) playPlaylistItem(pl.items, 0);
+      });
+    });
+    wrap.querySelectorAll("[data-pl-play]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var pl = myPlaylists.filter(function(p){ return p.id === b.getAttribute("data-pl-play"); })[0];
+        if(pl) playPlaylistItem(pl.items, Number(b.getAttribute("data-idx")));
+      });
+    });
+    wrap.querySelectorAll("[data-pl-remove]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var plId = b.getAttribute("data-pl-remove");
+        var idx = Number(b.getAttribute("data-idx"));
+        api("/api/playlists/" + encodeURIComponent(plId) + "/items/" + idx, { method: "DELETE" }).then(function(r){
+          if(!r || !r.data || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't remove that song."); return; }
+          var i = myPlaylists.findIndex(function(p){ return p.id === plId; });
+          if(i >= 0) myPlaylists[i] = r.data.playlist;
+          renderAll();
+        });
+      });
+    });
+    wrap.querySelectorAll("[data-pl-up]").forEach(function(b){
+      b.addEventListener("click", function(){ movePlaylistItem(b, -1); });
+    });
+    wrap.querySelectorAll("[data-pl-down]").forEach(function(b){
+      b.addEventListener("click", function(){ movePlaylistItem(b, 1); });
+    });
+    wrap.querySelectorAll("[data-pl-rename]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var plId = b.getAttribute("data-pl-rename");
+        var block = b.closest ? b.closest(".pl-block") : null;
+        var nameEl = block ? block.querySelector(".pl-head strong") : null;
+        if(b.textContent === "Save"){
+          var inp = block ? block.querySelector(".pl-rename-input") : null;
+          var name = inp ? inp.value.trim() : "";
+          if(!name){ toast("Give the playlist a name."); return; }
+          api("/api/playlists/" + encodeURIComponent(plId), { method: "PATCH", body: JSON.stringify({ name: name }) }).then(function(r){
+            if(!r || !r.data || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't rename that playlist."); return; }
+            var i = myPlaylists.findIndex(function(p){ return p.id === plId; });
+            if(i >= 0) myPlaylists[i] = r.data.playlist;
+            toast("Playlist renamed.");
+            renderAll();
+          });
+          return;
+        }
+        if(!nameEl) return;
+        var pl = myPlaylists.filter(function(p){ return p.id === plId; })[0];
+        var input = document.createElement("input");
+        input.type = "text"; input.className = "pl-rename-input"; input.maxLength = 60;
+        input.value = pl ? pl.name : "";
+        input.setAttribute("aria-label", "Playlist name");
+        nameEl.replaceWith(input);
+        input.focus(); input.select();
+        b.textContent = "Save";
+      });
+    });
+    wrap.querySelectorAll("[data-pl-delete]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var plId = b.getAttribute("data-pl-delete");
+        var pl = myPlaylists.filter(function(p){ return p.id === plId; })[0];
+        if(!pl) return;
+        if(!window.confirm("Delete the playlist “" + pl.name + "” for good? The songs stay on the site — only the playlist goes.")) return;
+        api("/api/playlists/" + encodeURIComponent(plId), { method: "DELETE" }).then(function(r){
+          if(!r || !r.data || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't delete that playlist."); return; }
+          myPlaylists = myPlaylists.filter(function(p){ return p.id !== plId; });
+          toast("Playlist deleted.");
+          renderAll();
+        });
+      });
+    });
   }
 
   /* ---------- Rankings controls (unchanged) ---------- */
@@ -3061,6 +3688,7 @@
       renderAll();
       return null;
     }).then(function(){
+      loadTrenches();
       renderAll();
     });
   }
