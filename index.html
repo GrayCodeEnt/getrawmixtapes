@@ -171,6 +171,26 @@
   .tape-meta .sub{color:var(--muted);font-size:13.5px}
   .tape-stats{display:flex;gap:14px;margin-top:8px;font-size:13.5px;color:var(--muted);font-weight:600}
   .tape-stats span{display:inline-flex;align-items:center;gap:5px}
+  /* ---------- Fan reactions / share / comments (everywhere music is) ---------- */
+  .tape-react{display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .tape-react .react-btn,.tape-react .share-btn{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;min-height:36px;font-weight:700;font-size:14px;cursor:pointer;user-select:none}
+  .tape-react .react-btn{background:var(--surface-2);border:1.5px solid var(--line);color:var(--text)}
+  .tape-react .react-btn:hover{border-color:var(--orange)}
+  .tape-react .react-btn.on{background:var(--orange);border-color:var(--orange);color:#fff}
+  .tape-react .react-btn.on-down{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .tape-react .share-btn{background:transparent;border:1.5px solid var(--line);color:var(--text)}
+  .tape-react .share-btn:hover{border-color:var(--orange);color:var(--orange)}
+  .comments{margin-top:28px;border-top:3px solid var(--text);padding-top:18px}
+  .comments h3{font-family:"Anton",sans-serif;font-size:24px;text-transform:uppercase;letter-spacing:.5px;margin:0 0 4px}
+  .comments .c-sub{color:var(--muted);font-size:14.5px;margin:0 0 14px}
+  .comment{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+  .comment .c-head{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:4px}
+  .comment .c-name{font-weight:700}
+  .comment .c-time{color:var(--muted);font-size:13px}
+  .comment p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+  .comment-form{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .comment-form input,.comment-form textarea{padding:10px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font-size:15px;font-family:inherit}
+  .comment-form textarea{min-height:72px;resize:vertical}
 
   .empty{background:var(--surface);border:2px dashed var(--line);border-radius:var(--radius);padding:30px 22px;text-align:center}
   .empty h3{font-family:"Anton",sans-serif;font-size:22px;margin:0 0 6px;text-transform:uppercase;letter-spacing:.5px}
@@ -1052,6 +1072,7 @@
       tracks: (t.tracks || []).map(function(tr){ return { title: tr.title, fileName: tr.fileName, url: tr.url, downloadUrl: tr.downloadUrl }; }),
       releaseAt: t.releaseAt || null, draft: !!t.draft, featured: !!t.featured,
       plays: Number(t.plays || 0), downloads: Number(t.downloads || 0),
+      up: Number(t.up || 0), down: Number(t.down || 0), commentCount: Number(t.commentCount || 0),
       cashtag: t.cashtag || "", createdAt: t.createdAt || 0, publishedAt: t.publishedAt || null
     };
   }
@@ -1399,6 +1420,30 @@
     ev.preventDefault();
     openFeature(el.getAttribute("data-feature"));
   });
+  // Fan reactions + share, everywhere the music is: tapping a thumb or
+  // Share on a card must not open the tape — the card's own click
+  // handler also ignores anything inside [data-react-row].
+  document.addEventListener("click", function(ev){
+    var v = ev.target.closest ? ev.target.closest("[data-vote]") : null;
+    if(v){ ev.preventDefault(); ev.stopPropagation(); voteOnTape(v.getAttribute("data-tape"), v.getAttribute("data-vote")); return; }
+    var s = ev.target.closest ? ev.target.closest("[data-share]") : null;
+    if(s){
+      ev.preventDefault(); ev.stopPropagation();
+      var t = findTape(s.getAttribute("data-share"));
+      if(t) shareTape(t);
+    }
+  });
+  document.addEventListener("keydown", function(ev){
+    if(ev.key!=="Enter" && ev.key!==" ") return;
+    var v = ev.target.closest ? ev.target.closest("[data-vote]") : null;
+    if(v){ ev.preventDefault(); voteOnTape(v.getAttribute("data-tape"), v.getAttribute("data-vote")); return; }
+    var s = ev.target.closest ? ev.target.closest("[data-share]") : null;
+    if(s){
+      ev.preventDefault();
+      var t = findTape(s.getAttribute("data-share"));
+      if(t) shareTape(t);
+    }
+  });
   /* ---------- Rendering (same look, data now from the server) ---------- */
   function coverHTML(tape, cls){
     if(tape.cover) return '<img src="'+tape.cover+'" alt="Cover art for '+esc(tape.title)+' by '+esc(tape.artist)+'" loading="lazy" />';
@@ -1420,8 +1465,9 @@
       '<span class="tape-meta"><h3>'+esc(tape.title)+'</h3>'+
       '<span class="artist artist-link" data-artist="'+esc(tape.handle||"")+'" role="link" tabindex="0" title="View '+esc(tape.artist)+' profile">'+artistAvatarHTML(tape)+esc(tape.artist)+'</span>'+
       '<span class="sub">'+esc(tape.genre)+(tape.dj? ' · Hosted by '+esc(tape.dj):'')+(tape.city? ' · '+esc(tape.city):'')+'</span>'+
-      '<span class="tape-stats" data-tape-stats="'+tape.id+'"><span>▶ '+pl(tape.plays,"play")+'</span><span>⬇ '+pl(tape.downloads,"download")+'</span><span>'+pl(tape.tracks.length,"track")+'</span></span></span>';
-    btn.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; if(btn._artistInline){ btn._artistInline(); return; } openTapePage(tape.id); });
+      '<span class="tape-stats" data-tape-stats="'+tape.id+'"><span>▶ '+pl(tape.plays,"play")+'</span><span>⬇ '+pl(tape.downloads,"download")+'</span><span>'+pl(tape.tracks.length,"track")+'</span></span>'
+      + reactRowHTML(tape) + '</span>';
+    btn.addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("[data-artist]")) return; if(ev.target.closest && ev.target.closest("[data-react-row]")) return; if(btn._artistInline){ btn._artistInline(); return; } openTapePage(tape.id); });
     return btn;
   }
   function visibleTapes(){
@@ -2052,6 +2098,100 @@
   /* ---------- Tape page (a full page at /tape/<id> — no pop-up, no side panel) ---------- */
   var tapePageLoading = null; // tape id currently being fetched for a deep link
   var tapePageMissing = {}; // ids the server already 404'd — don't re-fetch them
+  // ---- Fan reactions / share / comments --------------------------------
+  // One anonymous voter id per device (signed-in fans vote by @handle on
+  // the server instead). Counts always come from the server — never +1
+  // locally — so the number on screen is the number in the database.
+  function getVoterId(){
+    try{
+      var v = window.localStorage.getItem("getraw_voter") || "";
+      if(!/^[A-Za-z0-9_-]{8,64}$/.test(v)){
+        v = "v" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+        window.localStorage.setItem("getraw_voter", v);
+      }
+      return v;
+    }catch(e){ return "v-anon"; }
+  }
+  function myVoteFor(id){
+    try{ return window.localStorage.getItem("getraw_vote_" + id) || "none"; }catch(e){ return "none"; }
+  }
+  function setMyVote(id, vote){
+    try{
+      if(vote === "none") window.localStorage.removeItem("getraw_vote_" + id);
+      else window.localStorage.setItem("getraw_vote_" + id, vote);
+    }catch(e){}
+  }
+  // Spans, not buttons: the row lives inside tape cards, which are
+  // <button> elements themselves, and buttons cannot nest.
+  function reactRowHTML(tape){
+    var up = Number(tape.up || 0), down = Number(tape.down || 0);
+    var mine = myVoteFor(tape.id);
+    return '<span class="tape-react" data-react-row="'+tape.id+'">'
+      + '<span class="react-btn'+(mine==="up"?" on":"")+'" role="button" tabindex="0" data-vote="up" data-tape="'+tape.id+'" aria-label="Like this tape">👍 <span data-count="up">'+up+'</span></span>'
+      + '<span class="react-btn'+(mine==="down"?" on-down":"")+'" role="button" tabindex="0" data-vote="down" data-tape="'+tape.id+'" aria-label="Dislike this tape">👎 <span data-count="down">'+down+'</span></span>'
+      + '<span class="share-btn" role="button" tabindex="0" data-share="'+tape.id+'">↗ Share</span>'
+      + '</span>';
+  }
+  function paintReactRow(tape){
+    document.querySelectorAll('[data-react-row="'+tape.id+'"]').forEach(function(row){
+      var up = row.querySelector('[data-count="up"]'); if(up) up.textContent = Number(tape.up || 0);
+      var down = row.querySelector('[data-count="down"]'); if(down) down.textContent = Number(tape.down || 0);
+      var mine = myVoteFor(tape.id);
+      row.querySelectorAll("[data-vote]").forEach(function(b){
+        b.classList.toggle("on", b.getAttribute("data-vote") === "up" && mine === "up");
+        b.classList.toggle("on-down", b.getAttribute("data-vote") === "down" && mine === "down");
+      });
+    });
+  }
+  function voteOnTape(id, vote){
+    var tape = findTape(id);
+    var mine = myVoteFor(id);
+    var next = (mine === vote) ? "none" : vote; // tapping your vote again takes it back
+    return api("/api/tapes/" + encodeURIComponent(id) + "/react", { method: "POST", body: JSON.stringify({ voter: getVoterId(), vote: next }) }).then(function(r){
+      if(!r || !r.data || !r.data.ok) { toast("Couldn't save that vote — try again."); return; }
+      setMyVote(id, r.data.myVote || "none");
+      if(tape){ tape.up = r.data.up; tape.down = r.data.down; paintReactRow(tape); }
+    });
+  }
+  function shareTape(tape){
+    var url = "https://getrawmixtapes.com/tape/" + tape.id;
+    var text = tape.title + " by " + tape.artist + " — free on Get Raw Mixtapes";
+    if(navigator.share){
+      navigator.share({ title: tape.title + " — Get Raw Mixtapes", text: text, url: url }).catch(function(){ /* user dismissed the sheet */ });
+      return;
+    }
+    var done = function(){ toast("Link copied — send it anywhere."); };
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(done, function(){ toast(url); }); }
+    else { toast(url); }
+  }
+  // @mentions: @handle becomes a link to that artist's profile — the
+  // site's own [data-artist] handler opens it, same as every @name
+  // already on the site.
+  function renderCommentText(text){
+    var safe = esc(text);
+    return safe.replace(/@([A-Za-z0-9_]{2,30})/g, function(m, h){
+      return '<a class="artist-link" data-artist="@' + h + '">@' + h + '</a>';
+    });
+  }
+  function commentHTML(c){
+    var name = String(c.name || "Anonymous");
+    var nameHTML = /^@/.test(name)
+      ? '<a class="artist-link c-name" data-artist="' + esc(name) + '">' + esc(name) + '</a>'
+      : '<span class="c-name">' + esc(name) + '</span>';
+    var when = c.createdAt ? new Date(c.createdAt).toLocaleString() : "";
+    return '<div class="comment"><div class="c-head">' + nameHTML + '<span class="c-time">' + esc(when) + '</span></div><p>' + renderCommentText(c.text || "") + '</p></div>';
+  }
+  function loadComments(id){
+    var list = $("commentList"); if(!list) return;
+    api("/api/tapes/" + encodeURIComponent(id) + "/comments").then(function(r){
+      if(currentTapeId !== id) return;
+      var list2 = $("commentList"); if(!list2) return;
+      if(!r || !r.data || !r.data.ok){ list2.innerHTML = '<p class="c-sub">Couldn\'t load comments right now.</p>'; return; }
+      var cs = r.data.comments || [];
+      var t = findTape(id); if(t) t.commentCount = cs.length;
+      list2.innerHTML = cs.length ? cs.map(commentHTML).join("") : '<p class="c-sub">No comments yet — be the first to say something.</p>';
+    });
+  }
   function renderTapePage(){
     var wrap = $("tapeWrap");
     if(!wrap) return;
@@ -2125,6 +2265,32 @@
     });
     var da = $("tapePageDownloadAll");
     if(da) da.addEventListener("click", function(){ downloadAll(tape); });
+    // Reactions + share + comments — the fan options, on the tape page.
+    var reactWrap = document.createElement("div");
+    reactWrap.innerHTML = reactRowHTML(tape);
+    wrap.appendChild(reactWrap);
+    var cSec = document.createElement("section");
+    cSec.className = "comments";
+    cSec.innerHTML = '<h3>Comments</h3><p class="c-sub">Say what you think — @mention an artist to link their profile.</p>'
+      + '<div id="commentList"><p class="c-sub">Loading comments…</p></div>'
+      + '<form class="comment-form" id="commentForm"><input id="commentName" maxlength="30" placeholder="Your name (or @handle)" value="' + esc(currentUser || "") + '">'
+      + '<textarea id="commentText" maxlength="500" placeholder="Write a comment…" required></textarea>'
+      + '<div><button class="btn btn-orange small" type="submit">Post Comment</button></div></form>';
+    wrap.appendChild(cSec);
+    loadComments(tape.id);
+    var cf = $("commentForm");
+    if(cf) cf.addEventListener("submit", function(ev){
+      ev.preventDefault();
+      var textEl = $("commentText");
+      var text = textEl.value.trim();
+      if(!text) return;
+      var name = $("commentName").value.trim();
+      api("/api/tapes/" + encodeURIComponent(tape.id) + "/comments", { method: "POST", body: JSON.stringify({ name: name, text: text }) }).then(function(r){
+        if(!r || !r.data || !r.data.ok){ toast(r && r.data && r.data.error ? r.data.error : "Couldn't post that comment — try again."); return; }
+        textEl.value = "";
+        loadComments(tape.id);
+      });
+    });
     updateInlineNowPlaying();
   }
   function openTapePage(id){
