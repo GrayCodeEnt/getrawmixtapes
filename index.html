@@ -74,7 +74,15 @@
   .global-search-results button:last-child{border-bottom:0}
   .global-search-results button:hover{background:var(--surface-2)}
   .global-search-results .gs-handle{color:var(--muted);font-size:13.5px}
+  .global-search-results .gs-type{font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:var(--surface-2);color:var(--muted)}
+  .global-search-results .gs-type.fan{background:var(--orange);color:#fff}
   .global-search-results .gs-empty{padding:12px;color:var(--muted)}
+  .profile-badge{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;padding:2px 8px;border-radius:20px;vertical-align:middle}
+  .profile-badge.public{background:#00D632;color:#06281A}
+  .profile-badge.private{background:var(--orange);color:#fff}
+  .fan-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;color:var(--text);font-size:15px;margin-bottom:10px}
+  .fan-row:hover{border-color:var(--orange)}
+  .fan-row .fan-meta{line-height:1.4}
   .brand{display:flex;align-items:center;gap:10px;text-decoration:none;min-width:0;flex:0 1 auto}
   .brand svg{flex:0 0 auto}
   .brand-words{line-height:.95;white-space:nowrap}
@@ -482,6 +490,7 @@
       <a href="/featured" data-nav="featured">Featured</a>
       <a href="/rankings" data-nav="rankings">Rankings</a>
       <a href="/trenches" data-nav="trenches">Trenches</a>
+      <a href="/fans" data-nav="fans">Fans</a>
       <a href="/advertise" data-nav="advertise">Advertise</a>
     </nav>
     <div class="head-actions">
@@ -493,7 +502,7 @@
   </div>
   <div class="head-search">
     <form id="globalSearchForm" role="search" autocomplete="off">
-      <input type="search" id="globalSearch" placeholder="Search artists…" aria-label="Search artists" />
+      <input type="search" id="globalSearch" placeholder="Search artists and fans…" aria-label="Search artists and fans" />
       <button type="submit" class="btn btn-orange small">Search</button>
     </form>
     <div id="globalSearchResults" class="global-search-results" hidden></div>
@@ -571,6 +580,7 @@
         <a class="home-tile" href="/singles" data-nav="singles"><strong>Sing<span>les</span></strong><p>One song, not a full tape. The newest singles, free to stream and download.</p><span class="go">Go to Singles →</span></a>
         <a class="home-tile" href="/featured" data-nav="featured"><strong>Featured <span>Tapes</span></strong><p>The tapes at the front of the store — paid placements and top movers.</p><span class="go">Go to Featured →</span></a>
         <a class="home-tile" href="/rankings" data-nav="rankings"><strong>Rank<span>ings</span></strong><p>Global, Local, Most Plays, Most Downloads and by-genre charts.</p><span class="go">Go to Rankings →</span></a>
+        <a class="home-tile" href="/fans" data-nav="fans"><strong>Fa<span>ns</span></strong><p>Every fan on the site — find a profile, follow them, and see their wall.</p><span class="go">Go to Fans →</span></a>
         <a class="home-tile" href="/upload" data-nav="upload"><strong>Upload a <span>Tape</span></strong><p>Upload free — it saves as a private draft in your My Tapes until you publish it or schedule a premiere.</p><span class="go">Go to Upload →</span></a>
         <a class="home-tile" href="/advertise" data-nav="advertise"><strong>Advertise <span>With Us</span></strong><p>Featured slots from $25, homepage banner $50, Tape Spotlight $100.</p><span class="go">Go to Advertise →</span></a>
         <a class="home-tile" href="/sign-in" data-nav="sign-in"><strong>Sign <span>In</span></strong><p>Sign in with your @handle and password. Once you're in, tap your handle up top anytime to see your profile and saved downloads.</p><span class="go">Go to Sign In →</span></a>
@@ -653,6 +663,22 @@
     </div>
     <div id="trenchesList">
       <div class="empty"><h3>Loading Trenches…</h3><p>Pulling the latest posts…</p></div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: FANS ============ -->
+  <section id="fans" class="page" data-page="fans" aria-labelledby="fans-h">
+    <div class="sec-head">
+      <h2 id="fans-h">Fa<span class="accent">ns</span></h2>
+      <p>Every fan on Get Raw Mixtapes — find a profile, follow them, see their wall.</p>
+      <span class="spacer"></span>
+      <span id="fansCount" style="font-weight:700"></span>
+    </div>
+    <div class="toolbar">
+      <input type="search" id="fansSearchBox" placeholder="Search fans by name or @handle…" aria-label="Search fans" />
+    </div>
+    <div id="fansListWrap">
+      <div class="empty"><h3>Loading fans…</h3><p>Pulling every fan profile…</p></div>
     </div>
   </section>
 
@@ -978,6 +1004,7 @@
       <a href="/tapes" data-nav="tapes">Latest Tapes</a>
       <a href="/singles" data-nav="singles">Singles</a>
       <a href="/featured" data-nav="featured">Featured Tapes</a>
+      <a href="/fans" data-nav="fans">Fans</a>
       <a href="/rankings" data-nav="rankings">Rankings</a>
       <a href="/upload" data-nav="upload">Upload a Tape</a>
       <a href="/advertise" data-nav="advertise">Advertise With Us</a>
@@ -1452,10 +1479,10 @@
   }
 
   /* ---------- Separate-page router — clean paths, no hash (unchanged) ---------- */
-  var PAGES = ["home","tapes","singles","featured","rankings","trenches","upload","sign-in","advertise","artist","feature","tape"];
-  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","singles":"/singles","featured":"/featured","rankings":"/rankings","trenches":"/trenches","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist","feature":"/feature","tape":"/tape"};
-  var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/singles":"singles","/featured":"featured","/rankings":"rankings","/trenches":"trenches","/upload":"upload","/sign-in":"sign-in","/signin":"sign-in","/profile":"sign-in","/advertise":"advertise"};
-  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","singles":"Get Raw Mixtapes — Singles","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","trenches":"Get Raw Mixtapes — Trenches","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist","tape":"Get Raw Mixtapes — Tape","not-found":"Get Raw Mixtapes — Page Not Found"};
+  var PAGES = ["home","tapes","singles","featured","rankings","trenches","fans","upload","sign-in","advertise","artist","feature","tape"];
+  var PAGE_TO_PATH = {"home":"/","tapes":"/tapes","singles":"/singles","featured":"/featured","rankings":"/rankings","trenches":"/trenches","fans":"/fans","upload":"/upload","sign-in":"/sign-in","advertise":"/advertise","artist":"/artist","feature":"/feature","tape":"/tape"};
+  var PATH_TO_PAGE = {"/":"home","":"home","/home":"home","/tapes":"tapes","/singles":"singles","/featured":"featured","/rankings":"rankings","/trenches":"trenches","/fans":"fans","/upload":"upload","/sign-in":"sign-in","/signin":"sign-in","/profile":"sign-in","/advertise":"advertise"};
+  var PAGE_TITLES = {"home":"Get Raw Mixtapes — Artists Upload. Fans Stream Free.","tapes":"Get Raw Mixtapes — Tapes","singles":"Get Raw Mixtapes — Singles","featured":"Get Raw Mixtapes — Featured","rankings":"Get Raw Mixtapes — Rankings","trenches":"Get Raw Mixtapes — Trenches","fans":"Get Raw Mixtapes — Fans","upload":"Get Raw Mixtapes — Upload","sign-in":"Get Raw Mixtapes — Sign In","advertise":"Get Raw Mixtapes — Advertise","artist":"Get Raw Mixtapes — Artist Profile","feature":"Get Raw Mixtapes — Featured Artist","tape":"Get Raw Mixtapes — Tape","not-found":"Get Raw Mixtapes — Page Not Found"};
   var currentPage = "home";
   var currentArtistHandle = "";
   var currentFeatureHandle = "";
@@ -1527,6 +1554,7 @@
     if(name==="feature") renderFeature();
     if(name==="tape") renderTapePage();
     if(name==="trenches") loadTrenches();
+    if(name==="fans") renderFans();
   }
   document.addEventListener("click", function(ev){
     var a = ev.target.closest ? ev.target.closest('a[data-nav], a[href^="/"]') : null;
@@ -1907,8 +1935,8 @@
     showPage("artist");
   }
   // Global search — the bar at the top of every page. Fans type an artist
-  // name or @handle, pick them from the list to open their profile, or hit
-  // Search / Enter to see their tapes in the Tapes feed.
+  // or fan name or @handle, pick them from the list to open their profile,
+  // or hit Search / Enter to see their tapes in the Tapes feed.
   function artistMatches(q){
     q = (q||"").trim().toLowerCase();
     if(!q) return [];
@@ -1953,14 +1981,15 @@
     });
     m = m.slice(0, 6);
     if(!m.length){
-      box.innerHTML='<div class="gs-empty">No artist found for &ldquo;'+esc(q)+'&rdquo; — try the Tapes or Singles search for tape titles.</div>';
+      box.innerHTML='<div class="gs-empty">No artist or fan found for &ldquo;'+esc(q)+'&rdquo; — try the Fans page to browse every fan profile.</div>';
       box.hidden=false; return;
     }
     box.innerHTML="";
     m.forEach(function(a){
       var b=document.createElement("button");
       b.type="button";
-      b.innerHTML=artistAvatarHTML({ artist: a.name, artistAvatar: a.avatar })+'<span><strong>'+esc(a.name)+'</strong> <span class="gs-handle">'+esc(a.handle)+'</span></span>';
+      var tag = (a.type === "fan") ? '<span class="gs-type fan">Fan</span>' : '<span class="gs-type">Artist</span>';
+      b.innerHTML=artistAvatarHTML({ artist: a.name, artistAvatar: a.avatar })+'<span><strong>'+esc(a.name)+'</strong> <span class="gs-handle">'+esc(a.handle)+'</span> '+tag+'</span>';
       b.addEventListener("click", function(){ hideGlobalResults(); var inp=$("globalSearch"); if(inp) inp.value=""; openArtist(a.handle); });
       box.appendChild(b);
     });
@@ -2041,7 +2070,11 @@
       var singleCount = mapped.filter(isSingle).length;
       var releaseTotal = tapeCount + singleCount;
       var releaseWord = (tapeCount && singleCount) ? "release" : (singleCount ? "single" : "tape");
-      var html = '<div class="profile-head">'+headAvatar+'<div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · Artist profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
+      // Public / private badge on every profile, and the right kind of
+      // profile — a fan's page says Fan profile, not Artist profile.
+      var isFanProfile = p.type === "fan";
+      var privacyBadge = p.isPrivate ? '<span class="profile-badge private">Private</span>' : '<span class="profile-badge public">Public</span>';
+      var html = '<div class="profile-head">'+headAvatar+'<div><h3>'+esc(p.name)+' '+privacyBadge+'</h3><span class="handle">'+esc(p.handle)+'</span> · '+(isFanProfile?'Fan':'Artist')+' profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
       if(isOwnArtist) html += '<p class="avatar-edit-hint">Tap your photo to change it.</p><input type="file" class="avatar-quick-input" accept="image/*" hidden aria-label="Choose a profile photo" />';
       if(p.bio) html += '<p class="profile-bio">'+esc(p.bio)+'</p>';
       html += '<p class="artist-page-stats"><span><b>'+exactNum(releaseTotal)+'</b> '+(releaseTotal===1?releaseWord:releaseWord+"s")+'</span><span><b>'+exactNum(totals.plays||0)+'</b> '+((totals.plays||0)===1?'play':'plays')+'</span><span><b>'+exactNum(totals.downloads||0)+'</b> '+((totals.downloads||0)===1?'download':'downloads')+'</span></p>';
@@ -2050,7 +2083,7 @@
       var followers = Number(p.followers || 0), following = Number(p.following || 0);
       wallFollowState = isFollowing;
       html += '<p class="artist-follow-stats"><span><b data-followers-count>'+exactNum(followers)+'</b> '+(followers===1?'follower':'followers')+'</span><span><b data-following-count>'+exactNum(following)+'</b> following</span></p>';
-      if(!isOwnArtist) html += '<p style="margin:12px 0 0"><button class="btn '+(isFollowing?'btn-outline':'btn-dark')+' small" type="button" data-follow-btn="1">'+(isFollowing?'✓ Following':'Follow')+'</button>'+(p.isPrivate?' <span class="c-sub">Private profile</span>':'')+'</p>';
+      if(!isOwnArtist) html += '<p style="margin:12px 0 0"><button class="btn '+(isFollowing?'btn-outline':'btn-orange')+' small" type="button" data-follow-btn="1">'+(isFollowing?'✓ Following':'Follow')+'</button></p>';
       if(tag) html += '<p style="margin:12px 0 0"><a class="btn small" href="'+cashUrl(tag)+'" target="_blank" rel="noopener" style="background:#00D632;border-color:#00D632;color:#06281A">Donate — Cash App '+esc(tag)+'</a> <span style="color:var(--muted);font-size:13.5px">Donations go straight to the artist via Cash App.</span></p>';
       mapped.forEach(function(m){ if(!findTape(m.id)){ tapes.push(m); ensureTapeStats(m); } });
       if(!mapped.length){
@@ -2075,6 +2108,41 @@
       wallDiv.id = "artistWall"; wallDiv.style.marginTop = "24px";
       wrap.appendChild(wallDiv);
       loadWall(handle);
+    });
+  }
+  // Fans page: every fan account, newest first, with a name/@handle
+  // filter. Each row opens that fan's profile — this is how fans get
+  // found without already knowing a name.
+  function renderFans(){
+    var wrap = $("fansListWrap");
+    if(!wrap) return;
+    var q = ($("fansSearchBox") ? $("fansSearchBox").value.trim() : "");
+    var url = q ? "/api/artists?search=" + encodeURIComponent(q) : "/api/artists?list=fans";
+    wrap.innerHTML = '<div class="empty"><h3>Loading fans…</h3><p>Pulling every fan profile…</p></div>';
+    api(url).then(function(r){
+      var list = (r && r.data && r.data.artists) || [];
+      // The search endpoint returns artists too — the Fans page is fans only.
+      list = list.filter(function(a){ return a.type === "fan"; });
+      var count = $("fansCount");
+      if(count) count.textContent = list.length ? list.length + (list.length===1 ? " fan" : " fans") : "";
+      if(!list.length){
+        wrap.innerHTML = '<div class="empty"><h3>No fans found</h3><p>' + (q ? 'Nothing matches &ldquo;'+esc(q)+'&rdquo; — try another name or @handle.' : 'Be the first fan — create an account and your profile shows up here.') + '</p></div>';
+        return;
+      }
+      wrap.innerHTML = "";
+      list.forEach(function(a){
+        var followers = Number(a.followers || 0);
+        var row = document.createElement("button");
+        row.type = "button";
+        row.className = "fan-row";
+        row.setAttribute("data-artist", a.handle);
+        row.setAttribute("aria-label", a.name + " — fan profile");
+        row.innerHTML = artistAvatarHTML({ artist: a.name, artistAvatar: a.avatar })
+          + '<span class="fan-meta"><strong>'+esc(a.name)+'</strong> <span class="handle">'+esc(a.handle)+'</span> · Fan '
+          + (a.isPrivate ? '<span class="profile-badge private">Private</span>' : '<span class="profile-badge public">Public</span>')
+          + '<br><span class="c-sub">'+exactNum(followers)+' '+(followers===1?'follower':'followers')+(a.city ? ' · '+esc(a.city) : '')+'</span></span>';
+        wrap.appendChild(row);
+      });
     });
   }
   function renderNewDrops(){
@@ -2788,7 +2856,7 @@
       wrap.innerHTML = '<div class="wall-head"><h3>Wall</h3></div>'
         + '<div class="empty"><h3>This profile is private</h3><p>Only ' + esc(wallOwnerHandle) + ' and their followers can see this wall — follow them to see it.</p>'
         + (currentUser
-            ? '<p><button class="btn btn-dark small" type="button" data-follow-btn="1">Follow</button></p>'
+            ? '<p><button class="btn btn-orange small" type="button" data-follow-btn="1">Follow</button></p>'
             : '<p>You need an account to follow — <a href="/sign-in" data-nav="sign-in" class="artist-link">create one or sign in</a>.</p>')
         + '</div>';
       wrap.querySelectorAll("[data-follow-btn]").forEach(function(b){
@@ -3891,6 +3959,7 @@
   $("localCity").addEventListener("input", renderRankings);
   $("rankGenre").addEventListener("change", renderRankings);
   $("searchBox").addEventListener("input", renderTapes);
+  if($("fansSearchBox")) $("fansSearchBox").addEventListener("input", renderFans);
   $("genreFilter").addEventListener("change", renderTapes);
   $("singlesSearchBox").addEventListener("input", renderSingles);
   $("singlesGenreFilter").addEventListener("change", renderSingles);
