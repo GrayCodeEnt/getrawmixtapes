@@ -2284,8 +2284,13 @@
     }).catch(function(){ playerIsPlaying = false; updatePlayerControls(); toast("Tap play on the player to start the track."); });
   }
   function downloadTrack(tape, track){
+    // Downloads need a signed-in account — guests get the
+    // create-account popup instead, same as liking and commenting.
+    if(!getToken()){ showAuthPrompt(); return; }
     // Count the download on the server first, then open the file — the
-    // browser (or the app's DownloadManager) saves it from there.
+    // browser (or the app's DownloadManager) saves it from there. The
+    // token rides on the URL because a plain link / DownloadManager
+    // carries no Authorization header.
     api("/api/tapes/"+tape.id+"/download", { method:"POST", body: JSON.stringify({ track: track.idx }) }).then(function(r){
       if(r && r.status===200 && r.data && r.data.ok){
         tape.plays = r.data.plays; tape.downloads = r.data.downloads;
@@ -2296,8 +2301,10 @@
     });
     recordDownloadLocal(tape);
     tape.downloads++; updateCardStats(tape);
+    var dlUrl = track.downloadUrl || track.url;
+    dlUrl += (dlUrl.indexOf("?")>=0 ? "&" : "?") + "token=" + encodeURIComponent(getToken());
     var a = document.createElement("a");
-    a.href = track.downloadUrl || track.url; a.download = track.fileName || (track.title+".mp3");
+    a.href = dlUrl; a.download = track.fileName || (track.title+".mp3");
     document.body.appendChild(a); a.click(); a.remove();
     toast("Downloading “"+track.title+"” — saved to your profile.");
     refreshMe().then(function(){ renderAll(); });
@@ -2307,7 +2314,10 @@
     // The whole tape as one file: count the download on the server
     // first (same as a single song — one whole-tape download counts
     // once), then open the ZIP the backend builds from every song.
+    // Downloads need a signed-in account — guests get the
+    // create-account popup instead, same as liking and commenting.
     if(!isLive(tape)) return;
+    if(!getToken()){ showAuthPrompt(); return; }
     api("/api/tapes/"+tape.id+"/download", { method:"POST", body: JSON.stringify({}) }).then(function(r){
       if(r && r.status===200 && r.data && r.data.ok){
         tape.plays = r.data.plays; tape.downloads = r.data.downloads;
@@ -2318,7 +2328,7 @@
     });
     recordDownloadLocal(tape);
     var a = document.createElement("a");
-    a.href = API_BASE + "/api/tapes/" + encodeURIComponent(tape.id) + "/download-all";
+    a.href = API_BASE + "/api/tapes/" + encodeURIComponent(tape.id) + "/download-all?token=" + encodeURIComponent(getToken());
     a.download = (tape.title || "mixtape") + ".zip";
     document.body.appendChild(a); a.click(); a.remove();
     toast("Downloading the whole tape — "+tape.tracks.length+" songs in one file.");
