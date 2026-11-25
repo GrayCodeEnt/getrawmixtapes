@@ -168,6 +168,12 @@
   @media (prefers-color-scheme: dark){ .artist-link{ color:var(--orange); } }
   .artist-page-stats{ display:flex; gap:18px; flex-wrap:wrap; margin:12px 0 0; color:var(--muted); font-size:14.5px; }
   .artist-page-stats b{ color:var(--text); }
+  .artist-follow-stats{ display:flex; gap:18px; flex-wrap:wrap; margin:8px 0 0; color:var(--muted); font-size:14.5px; }
+  .artist-follow-stats b{ color:var(--text); }
+  .wall-head{ display:flex; align-items:baseline; gap:10px; margin:0 0 12px; }
+  .wall-head h3{ font-family:'Anton',sans-serif; font-size:22px; margin:0; text-transform:uppercase; letter-spacing:.5px; }
+  .bell-count{ background:var(--orange); color:#fff; border-radius:10px; padding:0 6px; font-size:12px; font-weight:700; margin-left:4px; }
+  .notif-item{ display:block; width:100%; text-align:left; margin-bottom:8px; white-space:normal; }
   .tape-meta .sub{color:var(--muted);font-size:13.5px}
   .tape-stats{display:flex;gap:14px;margin-top:8px;font-size:13.5px;color:var(--muted);font-weight:600}
   .tape-stats span{display:inline-flex;align-items:center;gap:5px}
@@ -480,6 +486,7 @@
     </nav>
     <div class="head-actions">
       <span class="user-chip" id="userChip"><a class="chip-link" href="/sign-in" data-nav="sign-in" id="chipProfileLink" aria-label="View your profile and saved downloads" title="View your profile and saved downloads"><span class="avatar" id="chipAvatar">?</span><span id="chipHandle">@guest</span></a><button type="button" id="signOutBtn">Sign out</button></span>
+      <button type="button" class="btn btn-ghost small" id="notifBtn" aria-label="Notifications" hidden>🔔 Alerts <span class="bell-count" id="notifCount" hidden>0</span></button>
       <a class="btn btn-ghost small" href="/sign-in" data-nav="sign-in" id="signInLink">Sign In</a>
       <a class="btn btn-orange small" href="/upload" data-nav="upload">Upload a Tape</a>
     </div>
@@ -1098,6 +1105,19 @@
   </div>
 </dialog>
 
+<dialog id="notifDlg" aria-labelledby="notifTitle">
+  <div class="dlg-head">
+    <div style="min-width:0">
+      <h3 id="notifTitle">Notifications</h3>
+      <div style="color:var(--muted);font-size:14.5px">Tags and @mentions — tap one to see it.</div>
+    </div>
+    <button class="dlg-close" id="notifClose" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="dlg-body">
+    <div id="notifList"></div>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script>(function(){
@@ -1134,6 +1154,14 @@
   var playlistQueue = null; // { items: [{tapeId, trackIdx}], pos } — playing a playlist, not a tape
   var pendingPlaylistAdd = null; // { tapeId, trackIdx } waiting on the picker — "all" means the whole tape
   var feedPosts = []; // Trenches posts, newest first, from GET /api/feed
+  var wallPosts = []; // wall posts for the profile page being viewed, newest first
+  // A post can live in Trenches or on a wall — votes, comments, and the
+  // share menu look in both places.
+  function findPostAnywhere(id){
+    var p = feedPosts.filter(function(x){ return x.id === id; })[0];
+    if(p) return p;
+    return wallPosts.filter(function(x){ return x.id === id; })[0] || null;
+  }
   var trenchesLoaded = false;
   var pendingShareTarget = null; // {kind:"tape"|"post", id} waiting on the Share-to-Trenches composer
   var shareMenuTarget = null; // {kind, id, title, subtitle, url} for the open share menu
@@ -1903,7 +1931,27 @@
     if(!inp || !box) return;
     var q=inp.value.trim();
     if(!q){ hideGlobalResults(); return; }
-    var m=artistMatches(q);
+    // Tape artists are local and instant; fans with no tapes only live
+    // on the server, so paint the local matches now and merge the server
+    // ones in when they come back — if the query hasn't moved on.
+    renderGlobalList(q, artistMatches(q), []);
+    api("/api/artists?search=" + encodeURIComponent(q)).then(function(r){
+      if(inp.value.trim() !== q) return;
+      var extra = (r && r.data && r.data.artists) || [];
+      renderGlobalList(q, artistMatches(q), extra);
+    });
+  }
+  function renderGlobalList(q, local, extra){
+    var box=$("globalSearchResults");
+    if(!box) return;
+    var seen = {}, m = [];
+    local.concat(extra).forEach(function(a){
+      var key = String(a.handle || "").toLowerCase();
+      if(!key || seen[key]) return;
+      seen[key] = true;
+      m.push(a);
+    });
+    m = m.slice(0, 6);
     if(!m.length){
       box.innerHTML='<div class="gs-empty">No artist found for &ldquo;'+esc(q)+'&rdquo; — try the Tapes or Singles search for tape titles.</div>';
       box.hidden=false; return;
@@ -1913,7 +1961,7 @@
       var b=document.createElement("button");
       b.type="button";
       b.innerHTML=artistAvatarHTML({ artist: a.name, artistAvatar: a.avatar })+'<span><strong>'+esc(a.name)+'</strong> <span class="gs-handle">'+esc(a.handle)+'</span></span>';
-      b.addEventListener("click", function(){ hideGlobalResults(); inp.value=""; openArtist(a.handle); });
+      b.addEventListener("click", function(){ hideGlobalResults(); var inp=$("globalSearch"); if(inp) inp.value=""; openArtist(a.handle); });
       box.appendChild(b);
     });
     box.hidden=false;
@@ -1927,23 +1975,35 @@
       var inp=$("globalSearch");
       var q=inp.value.trim();
       if(!q) return;
-      var m=artistMatches(q);
-      hideGlobalResults(); inp.value="";
-      if(m.length===1){ openArtist(m[0].handle); return; }
-      var exact=null;
-      m.forEach(function(a){ if(a.handle.toLowerCase()==="@"+q.toLowerCase() || a.name.toLowerCase()===q.toLowerCase()) exact=a; });
-      if(exact){ openArtist(exact.handle); return; }
-      var sb=$("searchBox");
-      if(sb) sb.value=q;
-      // Singles live on the Singles page, not in the Tapes feed — so if
-      // the Tapes search has no match, check Singles before landing.
-      if(!visibleTapes().length){
-        var ssb=$("singlesSearchBox");
-        if(ssb) ssb.value=q;
-        if(visibleSingles().length){ showPage("singles"); renderSingles(); return; }
-      }
-      showPage("tapes");
-      renderTapes();
+      // Merge the server fans in first, so one exact fan match opens
+      // their profile instead of landing on the feed.
+      api("/api/artists?search=" + encodeURIComponent(q)).then(function(r){
+        if(inp.value.trim() !== q) return;
+        var extra = (r && r.data && r.data.artists) || [];
+        var seen = {}, m = [];
+        artistMatches(q).concat(extra).forEach(function(a){
+          var key = String(a.handle || "").toLowerCase();
+          if(!key || seen[key]) return;
+          seen[key] = true;
+          m.push(a);
+        });
+        hideGlobalResults(); inp.value="";
+        if(m.length===1){ openArtist(m[0].handle); return; }
+        var exact=null;
+        m.forEach(function(a){ if(a.handle.toLowerCase()==="@"+q.toLowerCase() || a.name.toLowerCase()===q.toLowerCase()) exact=a; });
+        if(exact){ openArtist(exact.handle); return; }
+        var sb=$("searchBox");
+        if(sb) sb.value=q;
+        // Singles live on the Singles page, not in the Tapes feed — so if
+        // the Tapes search has no match, check Singles before landing.
+        if(!visibleTapes().length){
+          var ssb=$("singlesSearchBox");
+          if(ssb) ssb.value=q;
+          if(visibleSingles().length){ showPage("singles"); renderSingles(); return; }
+        }
+        showPage("tapes");
+        renderTapes();
+      });
     });
     document.addEventListener("click", function(ev){
       var box=$("globalSearchResults");
@@ -1985,6 +2045,12 @@
       if(isOwnArtist) html += '<p class="avatar-edit-hint">Tap your photo to change it.</p><input type="file" class="avatar-quick-input" accept="image/*" hidden aria-label="Choose a profile photo" />';
       if(p.bio) html += '<p class="profile-bio">'+esc(p.bio)+'</p>';
       html += '<p class="artist-page-stats"><span><b>'+exactNum(releaseTotal)+'</b> '+(releaseTotal===1?releaseWord:releaseWord+"s")+'</span><span><b>'+exactNum(totals.plays||0)+'</b> '+((totals.plays||0)===1?'play':'plays')+'</span><span><b>'+exactNum(totals.downloads||0)+'</b> '+((totals.downloads||0)===1?'download':'downloads')+'</span></p>';
+      // Follow: counts on every profile, button on everyone else's.
+      var isFollowing = !!r.data.isFollowing;
+      var followers = Number(p.followers || 0), following = Number(p.following || 0);
+      wallFollowState = isFollowing;
+      html += '<p class="artist-follow-stats"><span><b data-followers-count>'+exactNum(followers)+'</b> '+(followers===1?'follower':'followers')+'</span><span><b data-following-count>'+exactNum(following)+'</b> following</span></p>';
+      if(!isOwnArtist) html += '<p style="margin:12px 0 0"><button class="btn '+(isFollowing?'btn-outline':'btn-dark')+' small" type="button" data-follow-btn="1">'+(isFollowing?'✓ Following':'Follow')+'</button>'+(p.isPrivate?' <span class="c-sub">Private profile</span>':'')+'</p>';
       if(tag) html += '<p style="margin:12px 0 0"><a class="btn small" href="'+cashUrl(tag)+'" target="_blank" rel="noopener" style="background:#00D632;border-color:#00D632;color:#06281A">Donate — Cash App '+esc(tag)+'</a> <span style="color:var(--muted);font-size:13.5px">Donations go straight to the artist via Cash App.</span></p>';
       mapped.forEach(function(m){ if(!findTape(m.id)){ tapes.push(m); ensureTapeStats(m); } });
       if(!mapped.length){
@@ -2001,6 +2067,14 @@
         });
         wrap.appendChild(grid);
       }
+      wrap.querySelectorAll("[data-follow-btn]").forEach(function(b){
+        b.addEventListener("click", function(){ toggleFollow(handle); });
+      });
+      // The wall lives under the tapes on every profile.
+      var wallDiv = document.createElement("div");
+      wallDiv.id = "artistWall"; wallDiv.style.marginTop = "24px";
+      wrap.appendChild(wallDiv);
+      loadWall(handle);
     });
   }
   function renderNewDrops(){
@@ -2325,9 +2399,10 @@
       var t = findTape(id); if(!t) return null;
       return { kind: "tape", id: t.id, title: t.title, subtitle: t.title + " by " + t.artist + " — free on Get Raw Mixtapes", url: "https://getrawmixtapes.com/tape/" + t.id };
     }
-    var p = feedPosts.filter(function(x){ return x.id === id; })[0]; if(!p) return null;
+    var p = findPostAnywhere(id); if(!p) return null;
     var label = p.text ? p.text.slice(0, 80) : (p.kind === "tape" && p.tape ? p.tape.title + " by " + p.tape.artist : "A post on Get Raw Mixtapes");
-    return { kind: "post", id: p.id, title: label, subtitle: label + " — on Get Raw Mixtapes", url: "https://getrawmixtapes.com/trenches#" + p.id };
+    var url = p.wall ? "https://getrawmixtapes.com/artist/" + String(p.wall).replace(/^@/, "") : "https://getrawmixtapes.com/trenches#" + p.id;
+    return { kind: "post", id: p.id, title: label, subtitle: label + " — on Get Raw Mixtapes", url: url };
   }
   function openShareMenu(kind, id){
     var target = shareMenuTargetFor(kind, id);
@@ -2391,7 +2466,7 @@
     } else {
       var p = feedPosts.filter(function(x){ return x.id === target.id; })[0];
       prev.innerHTML = p
-        ? '<div class="trench-shared" style="margin:0"><div style="font-weight:700;margin-bottom:4px">'+esc(p.author)+'</div>' + (p.text ? '<p class="trench-text">'+renderCommentText(p.text)+'</p>' : '') + (p.mediaUrl ? '<div class="trench-media">' + (p.mediaType === "video" ? '<video src="'+esc(p.mediaUrl)+'" controls preload="metadata" playsinline></video>' : '<img src="'+esc(p.mediaUrl)+'" alt="" loading="lazy" />') + '</div>' : '') + '</div>'
+        ? '<div class="trench-shared" style="margin:0"><div style="font-weight:700;margin-bottom:4px">'+esc(p.author)+'</div>' + (p.text ? '<p class="trench-text">'+renderCommentText(p.text, p.mentions)+'</p>' : '') + (p.mediaUrl ? '<div class="trench-media">' + (p.mediaType === "video" ? '<video src="'+esc(p.mediaUrl)+'" controls preload="metadata" playsinline></video>' : '<img src="'+esc(p.mediaUrl)+'" alt="" loading="lazy" />') + '</div>' : '') + '</div>'
         : '<p class="c-sub">That post isn\'t here anymore.</p>';
     }
     $("shareTrenchesCaption").value = "";
@@ -2399,13 +2474,17 @@
     if(typeof d.showModal === "function"){ try{ d.showModal(); return; }catch(e){} }
     d.setAttribute("open", "");
   }
-  // @mentions: @handle becomes a link to that artist's profile — the
-  // site's own [data-artist] handler opens it, same as every @name
-  // already on the site.
-  function renderCommentText(text){
+  // @mentions: the tag shows the person's display name as the link text
+  // (the server resolves each @handle to the user record and sends the
+  // name along in a mentions map on every post and comment). The name
+  // links to their profile — the site's own [data-artist] handler opens
+  // it. A handle that isn't an account keeps the @handle as the text.
+  function renderCommentText(text, mentions){
     var safe = esc(text);
     return safe.replace(/@([A-Za-z0-9_]{2,30})/g, function(m, h){
-      return '<a class="artist-link" data-artist="@' + h + '">@' + h + '</a>';
+      var key = "@" + h.toLowerCase();
+      var name = (mentions && mentions[key]) || null;
+      return '<a class="artist-link" data-artist="' + key + '">' + esc(name || ("@" + h)) + '</a>';
     });
   }
   function commentHTML(c){
@@ -2414,7 +2493,7 @@
       ? '<a class="artist-link c-name" data-artist="' + esc(name) + '">' + esc(name) + '</a>'
       : '<span class="c-name">' + esc(name) + '</span>';
     var when = c.createdAt ? new Date(c.createdAt).toLocaleString() : "";
-    return '<div class="comment"><div class="c-head">' + nameHTML + '<span class="c-time">' + esc(when) + '</span></div><p>' + renderCommentText(c.text || "") + '</p></div>';
+    return '<div class="comment"><div class="c-head">' + nameHTML + '<span class="c-time">' + esc(when) + '</span></div><p>' + renderCommentText(c.text || "", c.mentions) + '</p></div>';
   }
   function loadComments(id){
     var list = $("commentList"); if(!list) return;
@@ -2555,7 +2634,7 @@
       if(r && r.status === 401){ showAuthPrompt(); return; }
       if(!r || !r.data || !r.data.ok) { toast("Couldn't save that vote — try again."); return; }
       setMyPostVote(id, r.data.myVote || "none");
-      var p = feedPosts.filter(function(x){ return x.id === id; })[0];
+      var p = findPostAnywhere(id);
       if(p){ p.up = r.data.up; p.down = r.data.down; paintPostRow(p); }
     });
   }
@@ -2565,7 +2644,7 @@
     var avatar = p.authorAvatar ? '<img class="artist-avatar" src="'+esc(p.authorAvatar)+'" alt="" />' : '<span class="artist-avatar artist-avatar-fallback">'+esc((p.author || "?").replace(/^@/,"").charAt(0).toUpperCase())+'</span>';
     var html = '<article class="trench-post" data-post="'+p.id+'">'
       + '<div class="trench-head">'+avatar+'<div class="t-who">'+who+'<div class="t-when">'+esc(when)+'</div></div></div>';
-    if(p.text) html += '<p class="trench-text">'+renderCommentText(p.text)+'</p>';
+    if(p.text) html += '<p class="trench-text">'+renderCommentText(p.text, p.mentions)+'</p>';
     if(p.mediaUrl){
       html += '<div class="trench-media">' + (p.mediaType === "video"
         ? '<video src="'+esc(p.mediaUrl)+'" controls preload="metadata" playsinline></video>'
@@ -2581,7 +2660,7 @@
     if(p.kind === "post" && p.sharedPost){
       var s = p.sharedPost;
       html += '<div class="trench-shared"><div style="font-weight:700;margin-bottom:4px">'+esc(s.author)+'</div>'
-        + (s.text ? '<p class="trench-text">'+renderCommentText(s.text)+'</p>' : '')
+        + (s.text ? '<p class="trench-text">'+renderCommentText(s.text, s.mentions)+'</p>' : '')
         + (s.mediaUrl ? '<div class="trench-media">' + (s.mediaType === "video" ? '<video src="'+esc(s.mediaUrl)+'" controls preload="metadata" playsinline></video>' : '<img src="'+esc(s.mediaUrl)+'" alt="" loading="lazy" />') + '</div>' : '')
         + (s.kind === "tape" && s.tape ? '<div class="trench-tape" data-open-tape="'+esc(s.tape.id)+'" role="link" tabindex="0"><div style="min-width:0"><div class="tt-title">'+esc(s.tape.title)+'</div><div class="tt-sub">'+esc(s.tape.artist)+'</div></div></div>' : '')
         + '</div>';
@@ -2621,6 +2700,13 @@
       return;
     }
     wrap.innerHTML = feedPosts.map(trenchPostHTML).join("");
+    bindPostCards(wrap);
+  }
+  // The buttons inside a post card — comments toggle, comment form,
+  // shared-tape link. Trenches and walls render the same cards, so they
+  // share this binding.
+  function bindPostCards(wrap){
+    if(!wrap) return;
     wrap.querySelectorAll("[data-post-comments-toggle]").forEach(function(b){
       b.addEventListener("click", function(){
         var id = b.getAttribute("data-post-comments-toggle");
@@ -2659,10 +2745,162 @@
       var list2 = $("postCommentList-" + id); if(!list2) return;
       if(!r || !r.data || !r.data.ok){ list2.innerHTML = '<p class="c-sub">Couldn\'t load comments right now.</p>'; return; }
       var cs = r.data.comments || [];
-      var p = feedPosts.filter(function(x){ return x.id === id; })[0];
+      var p = findPostAnywhere(id);
       if(p){ p.commentCount = cs.length; paintPostRow(p); }
       list2.innerHTML = cs.length ? cs.map(commentHTML).join("") : '<p class="c-sub">No comments yet — be the first to say something.</p>';
     });
+  }
+  // ---- Fan profile walls + follow ------------------------------------------
+  // Same options as Trenches, scoped to one profile: newest first, text
+  // and/or a photo/video, thumbs up/down, comments, share. Posting,
+  // liking, and commenting need an account; guests get the popup.
+  var wallOwnerHandle = ""; // @handle whose wall is showing
+  var wallFollowState = false; // is the viewer following the open profile
+  function loadWall(handle){
+    wallOwnerHandle = handle;
+    var wrap = $("artistWall");
+    if(!wrap) return;
+    wrap.innerHTML = '<div class="empty"><h3>Loading wall…</h3><p>Pulling their posts…</p></div>';
+    api("/api/artists/" + encodeURIComponent(handle.replace(/^@/,"")) + "/wall").then(function(r){
+      if(handle !== wallOwnerHandle) return;
+      renderWall(r);
+    });
+  }
+  function renderWall(r){
+    var wrap = $("artistWall"); if(!wrap) return;
+    if(!r || !r.data){
+      wrap.innerHTML = '<div class="empty"><h3>Couldn\'t load the wall right now.</h3><p>Try again in a bit.</p></div>';
+      return;
+    }
+    if(r.status === 403){
+      wallPosts = [];
+      wallFollowState = false;
+      wrap.innerHTML = '<div class="wall-head"><h3>Wall</h3></div>'
+        + '<div class="empty"><h3>This profile is private</h3><p>Only ' + esc(wallOwnerHandle) + ' and their followers can see this wall — follow them to see it.</p>'
+        + (currentUser
+            ? '<p><button class="btn btn-dark small" type="button" data-follow-btn="1">Follow</button></p>'
+            : '<p>You need an account to follow — <a href="/sign-in" data-nav="sign-in" class="artist-link">create one or sign in</a>.</p>')
+        + '</div>';
+      wrap.querySelectorAll("[data-follow-btn]").forEach(function(b){
+        b.addEventListener("click", function(){ toggleFollow(wallOwnerHandle); });
+      });
+      return;
+    }
+    if(!r.data.ok){
+      wrap.innerHTML = '<div class="empty"><h3>Couldn\'t load the wall right now.</h3><p>Try again in a bit.</p></div>';
+      return;
+    }
+    wallPosts = r.data.posts || [];
+    wallFollowState = !!r.data.isFollowing;
+    var html = '<div class="wall-head"><h3>Wall</h3><span class="c-sub">' + (wallPosts.length ? wallPosts.length + (wallPosts.length === 1 ? " post" : " posts") : "") + '</span></div>';
+    html += '<div class="form-card" style="margin-bottom:16px"><form id="wallComposer">'
+      + '<textarea id="wallText" maxlength="500" placeholder="Post on ' + esc(wallOwnerHandle) + '’s wall… @mention a fan to tag them." aria-label="Write a wall post" style="width:100%;min-height:72px"></textarea>'
+      + '<div class="mt-actions" style="margin-top:10px"><input type="file" id="wallMedia" accept="image/*,video/*" aria-label="Add a photo or video" />'
+      + '<button class="btn btn-orange small" type="submit">Post to Wall</button></div>'
+      + '<p class="c-sub" id="wallComposerHint" style="margin:10px 0 0">' + (currentUser ? 'Posting as <strong>' + esc(currentUser) + '</strong>' : 'You need an account to post — <a href="/sign-in" data-nav="sign-in" class="artist-link">create one or sign in</a>.') + '</p>'
+      + '</form></div>';
+    html += '<div id="wallList">' + (wallPosts.length ? wallPosts.map(trenchPostHTML).join("") : '<div class="empty"><h3>Nothing on the wall yet</h3><p>Be the first to post — a picture, a video, or just what\'s on your mind.</p></div>') + '</div>';
+    wrap.innerHTML = html;
+    bindPostCards($("wallList"));
+    var form = $("wallComposer");
+    if(form) form.addEventListener("submit", function(ev){
+      ev.preventDefault();
+      if(!currentUser){ showAuthPrompt(); return; }
+      var text = $("wallText").value.trim();
+      var fileInput = $("wallMedia");
+      var file = fileInput && fileInput.files ? fileInput.files[0] : null;
+      if(!text && !file){ toast("Write something or add a photo or video first."); return; }
+      var fd = new FormData();
+      fd.append("text", text);
+      if(file) fd.append("media", file, file.name);
+      api("/api/artists/" + encodeURIComponent(wallOwnerHandle.replace(/^@/,"")) + "/wall", { method: "POST", json: false, body: fd }).then(function(rr){
+        if(rr && rr.status === 401){ showAuthPrompt(); return; }
+        if(rr && rr.status === 403){ toast("This profile is private."); loadWall(wallOwnerHandle); return; }
+        if(!rr || !rr.data || !rr.data.ok){ toast((rr && rr.data && rr.data.error) || "Couldn't post that — try again."); return; }
+        $("wallText").value = "";
+        if(fileInput) fileInput.value = "";
+        toast("Posted to the wall.");
+        loadWall(wallOwnerHandle);
+      });
+    });
+  }
+  // Follow / unfollow a profile from its page. Guests get the popup;
+  // counts update in place, and a private wall opens up right away.
+  function setFollowUI(following, followers, followingCount){
+    wallFollowState = following;
+    document.querySelectorAll("[data-follow-btn]").forEach(function(b){
+      b.textContent = following ? "✓ Following" : "Follow";
+      b.classList.toggle("btn-dark", !following);
+      b.classList.toggle("btn-outline", following);
+    });
+    document.querySelectorAll("[data-followers-count]").forEach(function(el){ el.textContent = followers; });
+    document.querySelectorAll("[data-following-count]").forEach(function(el){ el.textContent = followingCount; });
+  }
+  function toggleFollow(handle){
+    if(!currentUser){ showAuthPrompt(); return Promise.resolve(); }
+    var action = wallFollowState ? "unfollow" : "follow";
+    return api("/api/artists/" + encodeURIComponent(handle.replace(/^@/,"")) + "/" + action, { method: "POST", body: JSON.stringify({}) }).then(function(r){
+      if(r && r.status === 401){ showAuthPrompt(); return; }
+      if(!r || !r.data || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't do that — try again."); return; }
+      setFollowUI(!!r.data.following, r.data.followers, r.data.followingCount);
+      toast(r.data.following ? "Following " + handle + "." : "Unfollowed " + handle + ".");
+      if(r.data.following) loadWall(handle); // a private wall opens once you follow
+    });
+  }
+  // ---- Notifications -------------------------------------------------------
+  // @mentions anywhere on the site notify the tagged fan. The bell in the
+  // header shows the unread count; opening it marks everything read, and
+  // tapping a notification takes you to the post that mentioned you.
+  var notifCache = [];
+  function paintBell(unread){
+    var btn = $("notifBtn"), badge = $("notifCount");
+    if(!btn || !badge) return;
+    btn.hidden = !currentUser;
+    badge.hidden = !(unread > 0);
+    badge.textContent = unread > 99 ? "99+" : String(unread);
+  }
+  function loadNotifications(){
+    if(!currentUser){ paintBell(0); return; }
+    api("/api/notifications").then(function(r){
+      if(!r || !r.data || !r.data.ok) return;
+      paintBell(r.data.unread || 0);
+    });
+  }
+  function openNotifications(){
+    if(!currentUser){ showAuthPrompt(); return; }
+    var list = $("notifList");
+    var d = $("notifDlg");
+    if(list) list.innerHTML = '<p class="c-sub">Loading…</p>';
+    if(d && typeof d.showModal === "function"){ try{ d.showModal(); }catch(e){} }
+    api("/api/notifications").then(function(r){
+      if(!r || !r.data || !r.data.ok){ if(list) list.innerHTML = '<p class="c-sub">Couldn\'t load notifications right now.</p>'; return; }
+      notifCache = r.data.notifications || [];
+      paintBell(0);
+      if(!notifCache.length){ if(list) list.innerHTML = '<p class="c-sub">Nothing yet — when someone @mentions you, it shows up here.</p>'; }
+      else if(list){
+        list.innerHTML = notifCache.map(function(n){
+          var when = n.createdAt ? new Date(n.createdAt).toLocaleString() : "";
+          return '<button type="button" class="btn btn-outline notif-item" data-notif="' + esc(n.id) + '">'
+            + '<strong>' + esc(n.fromName || n.from) + '</strong> ' + esc(n.label || "mentioned you") + '<br>'
+            + '<span class="c-sub">' + esc(n.snippet || "") + ' · ' + esc(when) + '</span></button>';
+        }).join("");
+        list.querySelectorAll("[data-notif]").forEach(function(b){
+          b.addEventListener("click", function(){
+            var n = notifCache.filter(function(x){ return x.id === b.getAttribute("data-notif"); })[0];
+            if(n) goToNotification(n);
+          });
+        });
+      }
+      // Opening the list marks everything read.
+      api("/api/notifications/read", { method: "POST", body: JSON.stringify({}) }).then(function(){ loadNotifications(); });
+    });
+  }
+  function goToNotification(n){
+    closeDlg("notifDlg");
+    var url = n.url || "";
+    if(url.indexOf("/artist/") === 0) openArtist("@" + url.replace(/^\/artist\//, ""));
+    else if(url.indexOf("/tape/") === 0) openTapePage(url.replace(/^\/tape\//, ""));
+    else showPage("trenches");
   }
   function renderTapePage(){
     var wrap = $("tapeWrap");
@@ -2792,6 +3030,8 @@
   $("editClose").addEventListener("click", function(){ closeDlg("editDialog"); });
   $("eCancel").addEventListener("click", function(){ closeDlg("editDialog"); });
   $("authPromptClose").addEventListener("click", function(){ closeDlg("authPromptDlg"); });
+  $("notifBtn").addEventListener("click", function(){ openNotifications(); });
+  $("notifClose").addEventListener("click", function(){ closeDlg("notifDlg"); });
   $("authPromptLater").addEventListener("click", function(){ closeDlg("authPromptDlg"); });
   $("authPromptCreate").addEventListener("click", function(){ closeDlg("authPromptDlg"); });
   $("playlistPickerClose").addEventListener("click", function(){ closeDlg("playlistPickerDlg"); });
@@ -3068,10 +3308,11 @@
   /* ---------- Profiles / auth (server accounts — log in anywhere) ---------- */
   function showMsg(id, ok, text){ var m=$(id); m.className="form-msg "+(ok?"ok":"err"); m.textContent=text; }
   function refreshMe(){
-    if(!getToken()){ currentUser = null; currentProfile = null; myPlaylists = []; playlistQueue = null; return Promise.resolve(null); }
+    if(!getToken()){ currentUser = null; currentProfile = null; myPlaylists = []; playlistQueue = null; loadNotifications(); return Promise.resolve(null); }
     return api("/api/auth/me").then(function(r){
       if(!r || r.status !== 200 || !r.data || !r.data.ok){
         if(r && r.status === 401){ setToken(""); currentUser = null; currentProfile = null; myPlaylists = []; playlistQueue = null; }
+        loadNotifications();
         return null;
       }
       currentUser = r.data.user.handle;
@@ -3089,7 +3330,7 @@
       });
       tapes = Object.keys(byId).map(function(k){ return byId[k]; });
       if(currentProfile.user.city && !$("localCity").value) $("localCity").value = currentProfile.user.city;
-      return loadPlaylists().then(function(){ return r.data; });
+      return loadPlaylists().then(function(){ loadNotifications(); return r.data; });
     });
   }
   function refreshFeed(){
@@ -3367,11 +3608,13 @@
     var html = '<div class="profile-head">'+headAvatar+'<div><h3>'+esc(p.name)+'</h3><span class="handle">'+esc(p.handle)+'</span> · '+(p.type==="artist"?"Artist":"Fan")+' profile'+(p.city?' · '+esc(p.city):'')+'</div></div>';
     html += '<p class="avatar-edit-hint">Tap your photo to change it.</p><input type="file" class="avatar-quick-input" accept="image/*" hidden aria-label="Choose a profile photo" />';
     if(p.bio) html += '<p class="profile-bio">'+esc(p.bio)+'</p>';
+    html += '<p class="artist-follow-stats"><span><b>'+exactNum(p.followers || 0)+'</b> '+((p.followers || 0)===1?'follower':'followers')+'</span><span><b>'+exactNum(p.following || 0)+'</b> following</span></p>';
     html += '<div class="form-card" style="margin-top:16px"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 4px;text-transform:uppercase">Edit profile</h3>';
     html += '<p style="color:var(--muted);margin:0 0 12px;font-size:14.5px">Your photo, name, city, and bio — fans see them on your public profile.</p>';
     html += '<div class="mt-actions" style="margin-bottom:12px"><input type="file" id="profileAvatarInput" accept="image/*" aria-label="Choose a profile photo" /><button class="btn btn-dark small" type="button" data-save-avatar="1">Save photo</button><button class="btn btn-outline small" type="button" data-remove-avatar="1">Remove photo</button></div>';
     html += '<div class="mt-actions" style="margin-bottom:12px"><input type="text" id="profileName" value="'+esc(p.name||"")+'" aria-label="Your name" placeholder="Your name" /><input type="text" id="profileCity" value="'+esc(p.city||"")+'" aria-label="Your city" placeholder="e.g. Boston, MA" /></div>';
     html += '<textarea id="profileBio" maxlength="500" placeholder="Tell fans about yourself (up to 500 characters)" aria-label="Your bio" style="width:100%;min-height:64px">'+esc(p.bio||"")+'</textarea>';
+    html += '<label class="check" style="display:block;margin:12px 0 0"><input type="checkbox" id="profilePrivate"'+(p.isPrivate?' checked':'')+' /> Private profile — only people who follow you can see your wall</label>';
     html += '<div class="mt-actions" style="margin-top:12px"><button class="btn btn-dark small" type="button" data-save-profile="1">Save profile</button></div></div>';
     html += '<div class="form-card" style="margin-top:16px"><h3 style="font-family:\'Anton\',sans-serif;font-size:19px;margin:0 0 8px;text-transform:uppercase">Saved downloads</h3>';
     if(!dl.length) html += '<p style="color:var(--muted);margin:0">Nothing saved yet. Hit <strong>⬇ Free</strong> on any track and the tape lands here.</p>';
@@ -3470,8 +3713,9 @@
         var name = $("profileName") ? $("profileName").value.trim() : "";
         var city = $("profileCity") ? $("profileCity").value.trim() : "";
         var bio = $("profileBio") ? $("profileBio").value.trim() : "";
+        var isPrivate = $("profilePrivate") ? $("profilePrivate").checked : false;
         if(!name){ toast("Add your name first."); return; }
-        api("/api/auth/me", { method:"PATCH", body: JSON.stringify({ name: name, city: city, bio: bio }) }).then(function(r){
+        api("/api/auth/me", { method:"PATCH", body: JSON.stringify({ name: name, city: city, bio: bio, isPrivate: isPrivate }) }).then(function(r){
           if(!r || r.status!==200 || !r.data.ok){ toast((r && r.data && r.data.error) || "Couldn't save your profile."); return; }
           if(currentProfile && r.data.user) currentProfile.user = r.data.user;
           toast("Profile saved.");
