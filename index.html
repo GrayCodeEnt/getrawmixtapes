@@ -776,7 +776,7 @@
   <section id="artist" class="page" data-page="artist" aria-labelledby="artist-h">
     <div class="sec-head">
       <h2 id="artist-h">Artist <span class="accent">Profile</span></h2>
-      <p>Every artist on Get Raw has their own page — all their tapes in one place, free to stream and download.</p>
+      <p id="artist-sub">Every artist on Get Raw has their own page — all their tapes in one place, free to stream and download.</p>
     </div>
     <div id="artistWrap"><div class="empty"><h3>Loading artist…</h3><p>Pulling their tapes…</p></div></div>
     <p style="margin-top:20px"><a class="btn btn-outline" href="/tapes" data-nav="tapes">← Back to Tapes</a> <a class="btn btn-dark" href="/rankings" data-nav="rankings">Rankings</a></p>
@@ -2054,10 +2054,18 @@
     api("/api/artists/" + encodeURIComponent(handle.replace(/^@/,""))).then(function(r){
       if(handle !== currentArtistHandle) return;
       if(!r || !r.data || !r.data.ok){
+        var artistH0 = $("artist-h"), artistSub0 = $("artist-sub");
+        if(artistH0) artistH0.innerHTML = 'Artist <span class="accent">Profile</span>';
+        if(artistSub0) artistSub0.textContent = "Every artist on Get Raw has their own page — all their tapes in one place, free to stream and download.";
         wrap.innerHTML = '<div class="empty"><h3>No profile for '+esc(handle)+' yet.</h3><p>That artist hasn\'t uploaded a tape yet — artist profiles are created on first upload.</p><a class="btn btn-orange" href="/upload" data-nav="upload">Upload a Tape</a></div>';
         return;
       }
       var p = r.data.profile, list = r.data.tapes || [], totals = r.data.totals || {};
+      // The section heading follows the profile: a fan's page says
+      // Fan Profile, an artist's says Artist Profile.
+      var artistH = $("artist-h"), artistSub = $("artist-sub");
+      if(artistH) artistH.innerHTML = (p.type === "fan" ? "Fan" : "Artist") + ' <span class="accent">Profile</span>';
+      if(artistSub) artistSub.textContent = p.type === "fan" ? "A fan's own page — their wall, their followers, and their profile." : "Every artist on Get Raw has their own page — all their tapes in one place, free to stream and download.";
       document.title = p.name + " — Get Raw Mixtapes";
       var tag = normCashtag(p.cashtag);
       var isOwnArtist = !!(currentUser && p.handle === currentUser);
