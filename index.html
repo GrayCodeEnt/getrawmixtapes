@@ -985,6 +985,23 @@
   </div>
 </dialog>
 
+<dialog id="authPromptDlg" aria-labelledby="authPromptTitle">
+  <div class="dlg-head">
+    <div style="min-width:0">
+      <h3 id="authPromptTitle">Create an account to join in</h3>
+      <div style="color:var(--muted);font-size:14.5px">Liking and commenting are for fans with an account — it takes a minute, and any account already on the site works as-is.</div>
+    </div>
+    <button class="dlg-close" id="authPromptClose" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="dlg-body">
+    <p style="margin:0 0 16px">Set up your free account and you can like tapes, leave comments, and save downloads.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btn btn-orange" href="/sign-in" data-nav="sign-in" id="authPromptCreate">Create Account</a>
+      <button type="button" class="btn btn-outline" id="authPromptLater">Not now</button>
+    </div>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script>(function(){
@@ -2099,18 +2116,15 @@
   var tapePageLoading = null; // tape id currently being fetched for a deep link
   var tapePageMissing = {}; // ids the server already 404'd — don't re-fetch them
   // ---- Fan reactions / share / comments --------------------------------
-  // One anonymous voter id per device (signed-in fans vote by @handle on
-  // the server instead). Counts always come from the server — never +1
+  // Liking and commenting need a signed-in account: the server keys
+  // every vote by the fan's @handle, so any account already on the site
+  // works as-is. Counts always come from the server — never +1
   // locally — so the number on screen is the number in the database.
-  function getVoterId(){
-    try{
-      var v = window.localStorage.getItem("getraw_voter") || "";
-      if(!/^[A-Za-z0-9_-]{8,64}$/.test(v)){
-        v = "v" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-        window.localStorage.setItem("getraw_voter", v);
-      }
-      return v;
-    }catch(e){ return "v-anon"; }
+  // Signed-out fans get the create-account popup instead of voting.
+  function showAuthPrompt(){
+    var d = $("authPromptDlg"); if(!d) return;
+    if(typeof d.showModal === "function"){ try{ d.showModal(); return; }catch(e){} }
+    d.setAttribute("open", "");
   }
   function myVoteFor(id){
     try{ return window.localStorage.getItem("getraw_vote_" + id) || "none"; }catch(e){ return "none"; }
@@ -2144,10 +2158,12 @@
     });
   }
   function voteOnTape(id, vote){
+    if(!currentUser){ showAuthPrompt(); return Promise.resolve(); }
     var tape = findTape(id);
     var mine = myVoteFor(id);
     var next = (mine === vote) ? "none" : vote; // tapping your vote again takes it back
-    return api("/api/tapes/" + encodeURIComponent(id) + "/react", { method: "POST", body: JSON.stringify({ voter: getVoterId(), vote: next }) }).then(function(r){
+    return api("/api/tapes/" + encodeURIComponent(id) + "/react", { method: "POST", body: JSON.stringify({ vote: next }) }).then(function(r){
+      if(r && r.status === 401){ showAuthPrompt(); return; }
       if(!r || !r.data || !r.data.ok) { toast("Couldn't save that vote — try again."); return; }
       setMyVote(id, r.data.myVote || "none");
       if(tape){ tape.up = r.data.up; tape.down = r.data.down; paintReactRow(tape); }
@@ -2273,7 +2289,10 @@
     cSec.className = "comments";
     cSec.innerHTML = '<h3>Comments</h3><p class="c-sub">Say what you think — @mention an artist to link their profile.</p>'
       + '<div id="commentList"><p class="c-sub">Loading comments…</p></div>'
-      + '<form class="comment-form" id="commentForm"><input id="commentName" maxlength="30" placeholder="Your name (or @handle)" value="' + esc(currentUser || "") + '">'
+      + '<form class="comment-form" id="commentForm">'
+      + (currentUser
+          ? '<p class="c-sub">Posting as <strong>' + esc(currentUser) + '</strong></p>'
+          : '<p class="c-sub">You need an account to comment — <a href="/sign-in" data-nav="sign-in" class="artist-link">create one or sign in</a>.</p>')
       + '<textarea id="commentText" maxlength="500" placeholder="Write a comment…" required></textarea>'
       + '<div><button class="btn btn-orange small" type="submit">Post Comment</button></div></form>';
     wrap.appendChild(cSec);
@@ -2281,11 +2300,12 @@
     var cf = $("commentForm");
     if(cf) cf.addEventListener("submit", function(ev){
       ev.preventDefault();
+      if(!currentUser){ showAuthPrompt(); return; }
       var textEl = $("commentText");
       var text = textEl.value.trim();
       if(!text) return;
-      var name = $("commentName").value.trim();
-      api("/api/tapes/" + encodeURIComponent(tape.id) + "/comments", { method: "POST", body: JSON.stringify({ name: name, text: text }) }).then(function(r){
+      api("/api/tapes/" + encodeURIComponent(tape.id) + "/comments", { method: "POST", body: JSON.stringify({ text: text }) }).then(function(r){
+        if(r && r.status === 401){ showAuthPrompt(); return; }
         if(!r || !r.data || !r.data.ok){ toast(r && r.data && r.data.error ? r.data.error : "Couldn't post that comment — try again."); return; }
         textEl.value = "";
         loadComments(tape.id);
@@ -2304,6 +2324,9 @@
   }
   $("editClose").addEventListener("click", function(){ closeDlg("editDialog"); });
   $("eCancel").addEventListener("click", function(){ closeDlg("editDialog"); });
+  $("authPromptClose").addEventListener("click", function(){ closeDlg("authPromptDlg"); });
+  $("authPromptLater").addEventListener("click", function(){ closeDlg("authPromptDlg"); });
+  $("authPromptCreate").addEventListener("click", function(){ closeDlg("authPromptDlg"); });
   $("eSave").addEventListener("click", function(){ saveEditTape(); });
   $("playerClose").addEventListener("click", function(){ audio.pause(); audio.removeAttribute("src"); audio.load(); $("audioEl").style.display = "none"; playQueue = null; nowPlaying = null; currentTape = null; playerIsPlaying = false; $("nowTitle").textContent = "Pick a song to play"; $("nowSub").textContent = "Free mixtapes and singles — tap ▶ on any song"; var nc = $("nowCover"); nc.removeAttribute("src"); nc.alt = ""; nc.style.display = "none"; updateInlineNowPlaying(); updatePlayerControls(); });
 
